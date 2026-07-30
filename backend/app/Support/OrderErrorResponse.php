@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Validation\ValidationException;
+
+class OrderErrorResponse
+{
+    public static function messageForCode(string $code): string
+    {
+        return match ($code) {
+            'ORDER_ALREADY_CREATED' => 'This order has already been created.',
+            'IDEMPOTENCY_KEY_REUSED' => 'This order request key has already been used with different checkout details.',
+            'CHECKOUT_QUOTE_EXPIRED' => 'Your checkout quote has expired. Please refresh checkout.',
+            'CHECKOUT_QUOTE_CONVERTED' => 'This checkout quote has already been used for an order.',
+            'CART_CHANGED' => 'Your cart changed since checkout was prepared.',
+            'PRICE_CHANGED' => 'An item price changed. Please review checkout again.',
+            'ITEM_UNAVAILABLE' => 'An item in your cart is no longer available.',
+            'VARIANT_UNAVAILABLE' => 'A selected variant is no longer available.',
+            'MODIFIER_UNAVAILABLE' => 'A selected modifier is no longer available.',
+            'RESTAURANT_CLOSED' => 'This restaurant is not accepting orders right now.',
+            'RESTAURANT_UNAVAILABLE' => 'This restaurant is not available for orders.',
+            'MINIMUM_ORDER_NOT_MET' => 'The minimum order amount is not met.',
+            'SERVICE_AREA_UNSUPPORTED' => 'Delivery is not available for this address.',
+            'INVALID_ORDER_TRANSITION' => 'This order status change is not allowed.',
+            'ORDER_ALREADY_ACCEPTED' => 'This order has already been accepted.',
+            'ORDER_ALREADY_REJECTED' => 'This order has already been rejected.',
+            'ORDER_CANCELLATION_NOT_ALLOWED' => 'This order cannot be cancelled at its current stage.',
+            'ORDER_ACCESS_DENIED' => 'You do not have access to this order.',
+            default => 'Request could not be completed.',
+        };
+    }
+
+    public static function extractCodeFromValidation(ValidationException $e): ?string
+    {
+        foreach ($e->errors() as $messages) {
+            foreach ($messages as $message) {
+                if (preg_match('/^([A-Z0-9_]+)$/', $message, $m)) {
+                    return $m[1];
+                }
+                if (preg_match('/^([A-Z0-9_]+):/', $message, $m)) {
+                    return $m[1];
+                }
+            }
+        }
+
+        return null;
+    }
+}
