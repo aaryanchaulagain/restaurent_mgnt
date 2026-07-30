@@ -1,0 +1,88 @@
+/* Suvakamana design tokens */
+
+:root {
+  /* Primary */
+  --color-charcoal: #161614;
+  --color-warm-black: #0d0d0c;
+  --color-soft-cream: #f7f1e7;
+  --color-porcelain: #fffdf8;
+
+  /* Accents */
+  --color-burnt-orange: #d8662d;
+  --color-copper: #b87333;
+  --color-warm-gold: #d6a64f;
+  --color-olive: #66754a;
+
+  /* Semantic */
+  --color-success: #2f6b4f;
+  --color-warning: #c4922a;
+  --color-error: #a33b2d;
+  --color-info: #4a6d8c;
+
+  /* Surfaces */
+  --surface-page: var(--color-porcelain);
+  --surface-elevated: #ffffff;
+  --surface-muted: var(--color-soft-cream);
+  --surface-inverse: var(--color-warm-black);
+  --surface-glass: rgba(255, 253, 248, 0.72);
+  --surface-glass-dark: rgba(13, 13, 12, 0.64);
+
+  /* Text */
+  --text-primary: var(--color-charcoal);
+  --text-secondary: #5c574e;
+  --text-muted: #8a8478;
+  --text-inverse: var(--color-porcelain);
+  --text-accent: var(--color-burnt-orange);
+
+  /* Borders */
+  --border-subtle: rgba(22, 22, 20, 0.08);
+  --border-strong: rgba(22, 22, 20, 0.16);
+  --border-accent: rgba(184, 115, 51, 0.45);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(13, 13, 12, 0.06);
+  --shadow-md: 0 8px 24px rgba(13, 13, 12, 0.08);
+  --shadow-lg: 0 20px 48px rgba(13, 13, 12, 0.12);
+  --shadow-glow-copper: 0 8px 28px rgba(216, 102, 45, 0.22);
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 9999px;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* Motion */
+  --ease-out-premium: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+
+  /* Typography */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-hero: clamp(2.5rem, 5vw, 4rem);
+
+  /* Texture */
+  --texture-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}

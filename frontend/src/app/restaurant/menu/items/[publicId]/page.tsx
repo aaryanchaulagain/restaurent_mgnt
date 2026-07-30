@@ -1,0 +1,45 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AdminShell } from "@/components/layout/admin-shell";
+import { Button } from "@/components/ui/button";
+import { MenuItemEditor } from "@/features/restaurant/components/menu-item-editor";
+import { restaurantMenuAdminApi } from "@/features/restaurant/api/restaurant-admin-api";
+import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
+import { restaurantNav } from "@/lib/admin-nav";
+
+export default function RestaurantMenuItemPage() {
+  const params = useParams<{ publicId: string }>();
+  const profile = useRestaurantProfile();
+  const router = useRouter();
+  const qc = useQueryClient();
+
+  const dupMutation = useMutation({
+    mutationFn: () => restaurantMenuAdminApi.duplicateItem(params.publicId),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["restaurant", "menu-items"] });
+      const newId = (res.data as { item: { public_id: string } }).item.public_id;
+      router.push(`/restaurant/menu/items/${newId}`);
+    },
+  });
+
+  return (
+    <AdminShell
+      brand={profile.data?.trading_name ?? "Restaurant"}
+      portalLabel="Restaurant Admin"
+      items={restaurantNav}
+      title="Edit menu item"
+      subtitle="Update item details, variants and modifiers"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => dupMutation.mutate()} loading={dupMutation.isPending}>
+            Duplicate
+          </Button>
+        </div>
+      }
+    >
+      <MenuItemEditor publicId={params.publicId} />
+    </AdminShell>
+  );
+}

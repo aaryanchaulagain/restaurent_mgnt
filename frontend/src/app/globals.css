@@ -1,0 +1,59 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@theme inline {
+  --color-charcoal: var(--color-charcoal);
+  --color-warm-black: var(--color-warm-black);
+  --color-soft-cream: var(--color-soft-cream);
+  --color-porcelain: var(--color-porcelain);
+  --color-burnt-orange: var(--color-burnt-orange);
+  --color-copper: var(--color-copper);
+  --color-warm-gold: var(--color-warm-gold);
+  --color-olive: var(--color-olive);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-info: var(--color-info);
+  --color-background: var(--surface-page);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(216, 102, 45, 0.2);
+}
+
+.texture-grain::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: var(--texture-grain);
+  mix-blend-mode: multiply;
+}
