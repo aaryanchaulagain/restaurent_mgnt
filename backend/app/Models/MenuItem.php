@@ -17,7 +17,7 @@ class MenuItem extends Model
         'short_description', 'description', 'image_path', 'image_urls', 'base_price_cents',
         'compare_at_price_cents', 'cost_price_cents', 'tax_category', 'preparation_minutes',
         'is_active', 'is_available', 'is_featured', 'is_vegetarian', 'is_vegan',
-        'is_gluten_free', 'is_halal', 'spice_level', 'calories', 'sort_order',
+        'is_gluten_free', 'is_halal', 'spice_level', 'type_details', 'calories', 'sort_order',
         'available_from', 'available_until',
     ];
 
@@ -34,6 +34,7 @@ class MenuItem extends Model
             'available_from' => 'datetime',
             'available_until' => 'datetime',
             'image_urls' => 'array',
+            'type_details' => 'array',
         ];
     }
 

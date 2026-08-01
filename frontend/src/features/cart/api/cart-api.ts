@@ -20,6 +20,7 @@ export type PublicMenuItem = {
   preparation_minutes?: number | null;
   is_available: boolean;
   availability_message?: string | null;
+  type_details?: Record<string, unknown> | null;
   dietary: {
     is_vegetarian: boolean;
     is_vegan: boolean;

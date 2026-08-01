@@ -29,6 +29,8 @@ export type BusinessTypeConfig = {
   supportsDietary: boolean;
   supportsPreparationTime: boolean;
   supportsCuisine: boolean;
+  /** Phase 2: show additive type_details form fields. */
+  supportsTypeDetails: boolean;
   defaultCategories: string[];
 };
 
@@ -51,6 +53,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: true,
     supportsPreparationTime: true,
     supportsCuisine: true,
+    supportsTypeDetails: false,
     defaultCategories: ["Starters", "Mains", "Drinks", "Desserts"],
   },
   bakery: {
@@ -71,6 +74,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: true,
     supportsPreparationTime: true,
     supportsCuisine: false,
+    supportsTypeDetails: true,
     defaultCategories: ["Breads", "Pastries", "Cakes", "Savouries"],
   },
   grocery: {
@@ -91,6 +95,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: false,
     supportsPreparationTime: false,
     supportsCuisine: false,
+    supportsTypeDetails: true,
     defaultCategories: ["Fresh", "Pantry", "Dairy", "Household"],
   },
   butcher: {
@@ -111,6 +116,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: false,
     supportsPreparationTime: false,
     supportsCuisine: false,
+    supportsTypeDetails: true,
     defaultCategories: ["Beef", "Chicken", "Lamb", "Pork"],
   },
   pharmacy: {
@@ -131,6 +137,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: false,
     supportsPreparationTime: false,
     supportsCuisine: false,
+    supportsTypeDetails: false,
     defaultCategories: ["OTC", "Personal care", "Wellness"],
   },
   other: {
@@ -151,6 +158,7 @@ const CONFIG: Record<BusinessVerticalType, BusinessTypeConfig> = {
     supportsDietary: false,
     supportsPreparationTime: false,
     supportsCuisine: false,
+    supportsTypeDetails: false,
     defaultCategories: ["General"],
   },
 };

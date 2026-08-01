@@ -15,6 +15,7 @@ use App\Models\RestaurantOpeningHour;
 use App\Services\Media\PublicImageService;
 use App\Services\Restaurant\RestaurantOpenStatusService;
 use App\Support\ApiResponse;
+use App\Support\MenuItemTypeDetails;
 use App\Support\VendorTypes;
 use Illuminate\Http\Request;
 
@@ -148,14 +149,15 @@ class PublicRestaurantController extends Controller
                 'base_price_cents' => $item->base_price_cents,
                 'compare_at_price_cents' => $item->compare_at_price_cents,
                 'is_available' => $item->is_available,
-                'is_featured' => $item->is_featured,
-                'dietary' => [
-                    'is_vegetarian' => $item->is_vegetarian,
-                    'is_vegan' => $item->is_vegan,
-                    'is_gluten_free' => $item->is_gluten_free,
-                    'is_halal' => $item->is_halal,
-                ],
-                'variants' => $item->variants->map(fn ($v) => [
+                    'is_featured' => $item->is_featured,
+                    'dietary' => [
+                        'is_vegetarian' => $item->is_vegetarian,
+                        'is_vegan' => $item->is_vegan,
+                        'is_gluten_free' => $item->is_gluten_free,
+                        'is_halal' => $item->is_halal,
+                    ],
+                    'type_details' => MenuItemTypeDetails::forPublic($item->type_details),
+                    'variants' => $item->variants->map(fn ($v) => [
                     'public_id' => $v->public_id,
                     'name' => $v->name,
                     'price_cents' => $v->price_cents,
@@ -294,6 +296,7 @@ class PublicRestaurantController extends Controller
                         'is_halal' => $item->is_halal,
                     ],
                     'spice_level' => $item->spice_level,
+                    'type_details' => MenuItemTypeDetails::forPublic($item->type_details),
                     'variants' => $item->variants->where('is_active', true)->where('is_available', true)->values()->map(fn ($v) => [
                         'public_id' => $v->public_id,
                         'name' => $v->name,

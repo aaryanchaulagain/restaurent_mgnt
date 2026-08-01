@@ -8,18 +8,39 @@ import { Badge } from "@/components/ui/feedback";
 import { Checkbox, Field, FileUpload, Input, Select, Textarea } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
 import { restaurantMenuAdminApi, type AdminMenuItem } from "@/features/restaurant/api/restaurant-admin-api";
+import { MenuItemTypeDetailsFields } from "@/features/restaurant/components/menu-item-type-details-fields";
 import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
+import {
+  emptyTypeDetailsFor,
+  type MenuItemTypeDetails,
+} from "@/features/restaurant/lib/menu-item-type-details";
 import { formatCents } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 
 type Variant = { name: string; price_cents: number | string; is_default: boolean; sku: string };
 type Props = { publicId?: string; restaurantKey?: string };
 
+function cleanTypeDetailsForSave(
+  type: string,
+  details: MenuItemTypeDetails,
+): MenuItemTypeDetails {
+  if (type !== "butcher") return details;
+  const butcher = details as {
+    fixed_weight_variants?: Array<{ name: string; weight_grams: number }>;
+  };
+  return {
+    ...details,
+    fixed_weight_variants: (butcher.fixed_weight_variants ?? []).filter(
+      (row) => row.name.trim() && row.weight_grams > 0,
+    ),
+  };
+}
+
 export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
-  const { copy } = useRestaurantShell();
+  const { copy, businessType } = useRestaurantShell();
   const isEdit = Boolean(publicId);
 
   const [name, setName] = useState("");
@@ -44,6 +65,9 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
   const [saved, setSaved] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [typeDetails, setTypeDetails] = useState<MenuItemTypeDetails>(
+    () => emptyTypeDetailsFor(businessType) ?? {},
+  );
 
   const categories = useQuery({
     queryKey: ["restaurant", restaurantKey, "categories"],
@@ -105,11 +129,17 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
       basePriceCents: String(item.base_price_cents),
       compareAtPriceCents: item.compare_at_price_cents != null ? String(item.compare_at_price_cents) : "",
       costPriceCents: item.cost_price_cents != null ? String(item.cost_price_cents) : "",
+      prepMins: item.preparation_minutes != null ? String(item.preparation_minutes) : "",
       isActive: item.is_active,
       isAvailable: item.is_available,
       isFeatured: item.is_featured ?? false,
+      isVegetarian: item.dietary?.is_vegetarian ?? false,
+      isVegan: item.dietary?.is_vegan ?? false,
+      isGlutenFree: item.dietary?.is_gluten_free ?? false,
+      isHalal: item.dietary?.is_halal ?? false,
+      typeDetails: item.type_details ?? emptyTypeDetailsFor(businessType) ?? {},
     };
-  }, [existingItem.data]);
+  }, [existingItem.data, businessType]);
 
   const prevDerivedRef = useRef(derivedItem);
   useEffect(() => {
@@ -122,9 +152,15 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
       setBasePriceCents(derivedItem.basePriceCents);
       setCompareAtPriceCents(derivedItem.compareAtPriceCents);
       setCostPriceCents(derivedItem.costPriceCents);
+      setPrepMins(derivedItem.prepMins);
       setIsActive(derivedItem.isActive);
       setIsAvailable(derivedItem.isAvailable);
       setIsFeatured(derivedItem.isFeatured);
+      setIsVegetarian(derivedItem.isVegetarian);
+      setIsVegan(derivedItem.isVegan);
+      setIsGlutenFree(derivedItem.isGlutenFree);
+      setIsHalal(derivedItem.isHalal);
+      setTypeDetails(derivedItem.typeDetails);
     }
   }, [derivedItem]);
 
@@ -168,6 +204,9 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         is_vegan: copy.supportsDietary ? isVegan : false,
         is_gluten_free: copy.supportsDietary ? isGlutenFree : false,
         is_halal: copy.supportsDietary ? isHalal : false,
+        type_details: copy.supportsTypeDetails
+          ? cleanTypeDetailsForSave(copy.type, typeDetails)
+          : null,
       };
 
       let itemId = publicId;
@@ -362,6 +401,14 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         />
         {fieldError("file") ? <p className="text-xs text-red-600">{fieldError("file")}</p> : null}
       </section>
+
+      {copy.supportsTypeDetails ? (
+        <MenuItemTypeDetailsFields
+          businessType={copy.type}
+          value={typeDetails}
+          onChange={setTypeDetails}
+        />
+      ) : null}
 
       {copy.supportsVariants ? (
       <section className="rounded-lg border p-5 bg-white space-y-4">

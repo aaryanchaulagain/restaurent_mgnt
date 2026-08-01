@@ -13,6 +13,8 @@ use App\Models\ModifierOption;
 use App\Models\User;
 use App\Services\Auth\AuditLogger;
 use App\Support\ApiResponse;
+use App\Support\BusinessTypes;
+use App\Support\MenuItemTypeDetails;
 use App\Support\RestaurantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -184,6 +186,7 @@ class RestaurantMenuController extends Controller
             'is_gluten_free' => ['sometimes', 'boolean'],
             'is_halal' => ['sometimes', 'boolean'],
             'spice_level' => ['nullable', Rule::in(config('restaurant.spice_levels'))],
+            'type_details' => ['sometimes', 'nullable', 'array'],
         ]);
         $category = MenuCategory::query()
             ->where('restaurant_id', $restaurantId)
@@ -202,6 +205,10 @@ class RestaurantMenuController extends Controller
                 throw ValidationException::withMessages(['compare_at_price_cents' => ['Compare-at price must exceed base price.']]);
             }
         }
+        $typeDetails = MenuItemTypeDetails::sanitize(
+            $this->businessTypeForRequest($request),
+            $data['type_details'] ?? null,
+        );
         $slug = $this->uniqueItemSlug($restaurantId, Str::slug($data['name']) ?: 'item');
         $item = MenuItem::query()->create([
             'public_id' => (string) Str::uuid(),
@@ -224,6 +231,7 @@ class RestaurantMenuController extends Controller
             'is_gluten_free' => $data['is_gluten_free'] ?? false,
             'is_halal' => $data['is_halal'] ?? false,
             'spice_level' => $data['spice_level'] ?? 'none',
+            'type_details' => $typeDetails,
             'sort_order' => (int) MenuItem::query()->where('restaurant_id', $restaurantId)->max('sort_order') + 1,
         ]);
         $this->audit($request, 'menu.item_created', $item, $restaurantId);
@@ -281,6 +289,7 @@ class RestaurantMenuController extends Controller
             'base_price_cents' => ['sometimes', 'integer', 'min:0'],
             'compare_at_price_cents' => ['nullable', 'integer', 'min:0'],
             'cost_price_cents' => ['nullable', 'integer', 'min:0'],
+            'preparation_minutes' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
             'is_available' => ['sometimes', 'boolean'],
             'is_featured' => ['sometimes', 'boolean'],
@@ -289,11 +298,18 @@ class RestaurantMenuController extends Controller
             'is_gluten_free' => ['sometimes', 'boolean'],
             'is_halal' => ['sometimes', 'boolean'],
             'spice_level' => ['nullable', Rule::in(config('restaurant.spice_levels'))],
+            'type_details' => ['sometimes', 'nullable', 'array'],
         ]);
         $base = $data['base_price_cents'] ?? $item->base_price_cents;
         $compare = $data['compare_at_price_cents'] ?? $item->compare_at_price_cents;
         if ($compare !== null && $compare <= $base) {
             throw ValidationException::withMessages(['compare_at_price_cents' => ['Compare-at price must exceed base price.']]);
+        }
+        if (array_key_exists('type_details', $data)) {
+            $data['type_details'] = MenuItemTypeDetails::sanitize(
+                $this->businessTypeForRequest($request),
+                $data['type_details'],
+            );
         }
         $item->update($data);
         $this->audit($request, 'menu.item_updated', $item, $restaurantId);
@@ -591,6 +607,8 @@ class RestaurantMenuController extends Controller
                 'is_halal' => $item->is_halal,
             ],
             'spice_level' => $item->spice_level,
+            'preparation_minutes' => $item->preparation_minutes,
+            'type_details' => $item->type_details,
             'sort_order' => $item->sort_order,
             'image_path' => $item->image_path,
             'image' => app(\App\Services\Media\PublicImageService::class)->toPublicPayload($item->image_urls, 'item'),
@@ -608,6 +626,16 @@ class RestaurantMenuController extends Controller
         }
 
         return $payload;
+    }
+
+    private function businessTypeForRequest(Request $request): string
+    {
+        $restaurant = RestaurantContext::restaurant($request)->loadMissing('business');
+
+        return BusinessTypes::forRestaurant(
+            $restaurant->business?->business_type,
+            is_string($restaurant->vendor_type) ? $restaurant->vendor_type : null,
+        );
     }
 
     private function audit(Request $request, string $action, $model, int $restaurantId): void

@@ -26,4 +26,11 @@ describe("business-type-config", () => {
     expect(restaurant.addProductLabel).toBe("Add menu item");
     expect(restaurant.supportsDietary).toBe(true);
   });
+
+  it("enables type details for bakery grocery and butcher", () => {
+    expect(getBusinessTypeConfig("bakery").supportsTypeDetails).toBe(true);
+    expect(getBusinessTypeConfig("grocery").supportsTypeDetails).toBe(true);
+    expect(getBusinessTypeConfig("butcher").supportsTypeDetails).toBe(true);
+    expect(getBusinessTypeConfig("restaurant").supportsTypeDetails).toBe(false);
+  });
 });

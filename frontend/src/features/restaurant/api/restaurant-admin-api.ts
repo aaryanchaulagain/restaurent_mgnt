@@ -55,11 +55,19 @@ export type AdminMenuItem = {
   base_price_cents: number;
   compare_at_price_cents?: number | null;
   cost_price_cents?: number;
+  preparation_minutes?: number | null;
   is_active: boolean;
   is_available: boolean;
   is_featured?: boolean;
   short_description?: string | null;
   description?: string | null;
+  type_details?: Record<string, unknown> | null;
+  dietary?: {
+    is_vegetarian?: boolean;
+    is_vegan?: boolean;
+    is_gluten_free?: boolean;
+    is_halal?: boolean;
+  };
   image?: { card_url: string; original_url: string; thumbnail_url: string; large_url: string };
   variants?: unknown[];
   allergens?: unknown[];
