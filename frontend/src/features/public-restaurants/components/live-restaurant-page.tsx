@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/overlay";
 import { SearchInput, Textarea } from "@/components/ui/forms";
 import { publicRestaurantApi, type PublicMenuItem } from "@/features/cart/api/cart-api";
 import { useCart } from "@/features/cart/components/cart-provider";
+import { getBusinessTypeConfig } from "@/features/business/config/business-type-config";
 import { formatCents } from "@/lib/utils";
 import { pickCardImage } from "@/lib/media";
 
@@ -173,6 +174,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
   }
 
   const r = restaurantQuery.data.restaurant;
+  const copy = getBusinessTypeConfig(r.business_type ?? r.vendor_type);
   const unavailable = !r.accepting_orders;
   const openLabel = unavailable
     ? "Not accepting orders"
@@ -182,7 +184,9 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
   const locationLine = r.address_summary
     ? `${r.address_summary.suburb}, ${r.address_summary.state}`
     : r.short_description;
-  const cuisineLine = r.cuisines?.map((c) => c.name).filter(Boolean).join(" · ");
+  const cuisineLine = copy.supportsCuisine
+    ? r.cuisines?.map((c) => c.name).filter(Boolean).join(" · ")
+    : undefined;
 
   const estimateUnit = () => {
     if (!selected) return 0;
@@ -265,14 +269,14 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
             {r.short_description ||
               cuisineLine ||
               locationLine ||
-              "Crafted dishes, ready for pickup or delivery."}
+              `${copy.label} products, ready for pickup or delivery.`}
           </p>
 
           <div
             className="hero-fade hero-fade-delay-2 mt-8 flex flex-wrap items-center gap-3"
           >
             <Button size="lg" onClick={scrollToMenu}>
-              Browse menu
+              Browse {copy.catalogueLabel.toLowerCase()}
             </Button>
             <span
               className={`rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium backdrop-blur-sm ${
@@ -288,7 +292,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                 Min {formatCents(r.minimum_order_cents)}
               </span>
             ) : null}
-            {r.average_preparation_minutes ? (
+            {r.average_preparation_minutes && copy.supportsPreparationTime ? (
               <span className="rounded-[var(--radius-md)] bg-white/12 px-3 py-2 text-sm text-white/85 backdrop-blur-sm">
                 ~{r.average_preparation_minutes} min
               </span>
@@ -363,7 +367,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                     const value = e.target.value;
                     startTransition(() => setMenuQuery(value));
                   }}
-                  placeholder="Search dishes"
+                  placeholder={copy.searchPlaceholder}
                   className="w-full lg:max-w-xs"
                 />
               </div>
@@ -381,7 +385,9 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                         {cat.name}
                       </h2>
                     </div>
-                    <p className="text-sm text-[var(--text-muted)]">{catItems.length} dishes</p>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      {catItems.length} {copy.productPluralLabel.toLowerCase()}
+                    </p>
                   </div>
                   <div className="grid gap-4">
                     {catItems.map((item) => (
@@ -404,7 +410,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
 
               {items.length === 0 ? (
                 <EmptyState
-                  title="No matching dishes"
+                  title={`No matching ${copy.productPluralLabel.toLowerCase()}`}
                   description="Try another category or clear your search."
                 />
               ) : null}

@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/forms";
 import { Modal } from "@/components/ui/overlay";
 import { restaurantMenuAdminApi } from "@/features/restaurant/api/restaurant-admin-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { ApiError } from "@/lib/api/client";
 import { formatCents } from "@/lib/utils";
 
@@ -17,7 +16,7 @@ type ModOption = { public_id: string; name: string; price_adjustment_cents: numb
 type ModGroup = { public_id: string; name: string; selection_type: string; minimum_selections: number; maximum_selections: number; is_required: boolean; is_active?: boolean; options?: ModOption[] };
 
 export default function ModifierGroupsPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items, copy } = useRestaurantShell();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [optionTarget, setOptionTarget] = useState<ModGroup | null>(null);
@@ -54,11 +53,21 @@ export default function ModifierGroupsPage() {
 
   const resetGroupForm = () => { setGName(""); setGType("single"); setGMin("0"); setGMax("1"); setGRequired(false); };
 
+  if (!copy.supportsModifiers) {
+    return (
+      <AdminShell brand={brand} portalLabel={portalLabel} items={items} title="Modifiers">
+        <p className="text-sm text-[var(--text-secondary)]">
+          Modifier groups are not used for {copy.label.toLowerCase()} catalogues.
+        </p>
+      </AdminShell>
+    );
+  }
+
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={items}
       title="Modifier groups"
       subtitle="Reusable modifier groups and options"
       actions={<Button size="sm" onClick={() => { setCreateOpen(true); resetGroupForm(); setFormError(""); }}>Add group</Button>}

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/feedback";
 import { Checkbox, Field, FileUpload, Input, Select, Textarea } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
 import { restaurantMenuAdminApi, type AdminMenuItem } from "@/features/restaurant/api/restaurant-admin-api";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { formatCents } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 
@@ -18,6 +19,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
   const toast = useToast();
+  const { copy } = useRestaurantShell();
   const isEdit = Boolean(publicId);
 
   const [name, setName] = useState("");
@@ -51,7 +53,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
   const ensureCategory = useMutation({
     mutationFn: async () => {
       const res = await restaurantMenuAdminApi.createCategory({
-        name: "General",
+        name: copy.defaultCategories[0] ?? "General",
         is_active: true,
       });
       return res.data.category;
@@ -158,14 +160,14 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         base_price_cents: Number(basePriceCents),
         compare_at_price_cents: compareAtPriceCents ? Number(compareAtPriceCents) : null,
         cost_price_cents: costPriceCents ? Number(costPriceCents) : null,
-        preparation_minutes: prepMins ? Number(prepMins) : null,
+        preparation_minutes: copy.supportsPreparationTime && prepMins ? Number(prepMins) : null,
         is_active: isActive,
         is_available: isAvailable,
         is_featured: isFeatured,
-        is_vegetarian: isVegetarian,
-        is_vegan: isVegan,
-        is_gluten_free: isGlutenFree,
-        is_halal: isHalal,
+        is_vegetarian: copy.supportsDietary ? isVegetarian : false,
+        is_vegan: copy.supportsDietary ? isVegan : false,
+        is_gluten_free: copy.supportsDietary ? isGlutenFree : false,
+        is_halal: copy.supportsDietary ? isHalal : false,
       };
 
       let itemId = publicId;
@@ -180,7 +182,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         await restaurantMenuAdminApi.uploadItemImage(itemId, imageFile);
       }
 
-      if (variants.length > 0 && itemId) {
+      if (copy.supportsVariants && variants.length > 0 && itemId) {
         await restaurantMenuAdminApi.syncVariants(
           itemId,
           variants.map((v) => ({
@@ -192,7 +194,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         );
       }
 
-      if (modifierGroupIds.length > 0 && itemId) {
+      if (copy.supportsModifiers && modifierGroupIds.length > 0 && itemId) {
         await restaurantMenuAdminApi.syncModifierGroups(itemId, modifierGroupIds);
       }
 
@@ -206,8 +208,8 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
       qc.invalidateQueries({ queryKey: ["platform-restaurant"] });
       qc.invalidateQueries({ queryKey: ["public-menu"] });
       toast.push({
-        title: isEdit ? "Item updated" : "Item created",
-        description: isEdit ? "Changes are live." : "Your dish was saved.",
+        title: isEdit ? `${copy.productLabel} updated` : `${copy.productLabel} created`,
+        description: isEdit ? "Changes are live." : copy.savedCreateDescription,
         tone: "success",
       });
       setTimeout(() => setSaved(false), 5000);
@@ -260,21 +262,21 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
 
       <section className="rounded-lg border p-5 bg-white space-y-4">
         <h3 className="text-lg font-semibold">Basic information</h3>
-        <Field label="Item name" htmlFor="item-name" error={fieldError("name")}>
-          <Input id="item-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Himalayan Dal Bhat Thali" />
+        <Field label={`${copy.productLabel} name`} htmlFor="item-name" error={fieldError("name")}>
+          <Input id="item-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={copy.productLabel} />
         </Field>
         <Field label="URL slug" htmlFor="item-slug" error={fieldError("slug")}>
-          <Input id="item-slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="dal-bhat-thali" />
+          <Input id="item-slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="product-slug" />
         </Field>
         <Field
-          label="Category"
+          label={copy.categoryLabel}
           htmlFor="item-cat"
           error={fieldError("menu_category_public_id")}
           hint={
             ensureCategory.isPending
-              ? "Creating a default category…"
+              ? `Creating a default ${copy.categoryLabel.toLowerCase()}…`
               : (categories.data?.length ?? 0) === 0
-                ? "A category is required — we’ll create “General” automatically."
+                ? `A ${copy.categoryLabel.toLowerCase()} is required — we’ll create “${copy.defaultCategories[0] ?? "General"}” automatically.`
                 : undefined
           }
         >
@@ -300,7 +302,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
             onClick={() => ensureCategory.mutate()}
             disabled={ensureCategory.isPending}
           >
-            Create “General” category
+            Create “{copy.defaultCategories[0] ?? "General"}” {copy.categoryLabel.toLowerCase()}
           </Button>
         ) : null}
         <Field label="Short description" htmlFor="item-short"><Textarea id="item-short" value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} /></Field>
@@ -330,9 +332,11 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
             <Input id="cost-price" type="number" value={costPriceCents} onChange={(e) => setCostPriceCents(e.target.value)} />
           </Field>
         </div>
-        <Field label="Preparation time (minutes)" htmlFor="prep-time">
-          <Input id="prep-time" type="number" value={prepMins} onChange={(e) => setPrepMins(e.target.value)} />
-        </Field>
+        {copy.supportsPreparationTime ? (
+          <Field label="Preparation time (minutes)" htmlFor="prep-time">
+            <Input id="prep-time" type="number" value={prepMins} onChange={(e) => setPrepMins(e.target.value)} />
+          </Field>
+        ) : null}
         {basePriceCents ? <p className="text-xs text-[var(--text-muted)]">Display price: {formatCents(Number(basePriceCents))}</p> : null}
       </section>
 
@@ -359,6 +363,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         {fieldError("file") ? <p className="text-xs text-red-600">{fieldError("file")}</p> : null}
       </section>
 
+      {copy.supportsVariants ? (
       <section className="rounded-lg border p-5 bg-white space-y-4">
         <h3 className="text-lg font-semibold">Variants</h3>
         {variants.map((v, idx) => (
@@ -372,7 +377,9 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         <Button type="button" variant="outline" size="sm" onClick={addVariant}>Add variant</Button>
         {fieldError("variants") ? <p className="text-xs text-red-600">{fieldError("variants")}</p> : null}
       </section>
+      ) : null}
 
+      {copy.supportsModifiers ? (
       <section className="rounded-lg border p-5 bg-white space-y-4">
         <h3 className="text-lg font-semibold">Modifier groups</h3>
         {(modifierGroups.data ?? []).map((g) => (
@@ -380,7 +387,9 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         ))}
         {modifierGroups.data?.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No modifier groups yet. <a href="/restaurant/menu/modifiers" className="underline">Create one</a></p> : null}
       </section>
+      ) : null}
 
+      {copy.supportsDietary ? (
       <section className="rounded-lg border p-5 bg-white space-y-4">
         <h3 className="text-lg font-semibold">Dietary &amp; allergens</h3>
         <div className="flex flex-wrap gap-4">
@@ -390,6 +399,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
           <Checkbox label="Halal" checked={isHalal} onChange={(e) => setIsHalal(e.target.checked)} />
         </div>
       </section>
+      ) : null}
 
       <section className="rounded-lg border p-5 bg-white space-y-4">
         <h3 className="text-lg font-semibold">Availability</h3>

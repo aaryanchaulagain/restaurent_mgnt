@@ -6,12 +6,11 @@ import { AdminShell } from "@/components/layout/admin-shell";
 import { Button } from "@/components/ui/button";
 import { MenuItemEditor } from "@/features/restaurant/components/menu-item-editor";
 import { restaurantMenuAdminApi } from "@/features/restaurant/api/restaurant-admin-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 
 export default function RestaurantMenuItemPage() {
   const params = useParams<{ publicId: string }>();
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items, copy } = useRestaurantShell();
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -26,11 +25,15 @@ export default function RestaurantMenuItemPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
-      title="Edit menu item"
-      subtitle="Update item details, variants and modifiers"
+      brand={brand}
+      portalLabel={portalLabel}
+      items={items}
+      title={`Edit ${copy.productLabel.toLowerCase()}`}
+      subtitle={
+        copy.supportsModifiers
+          ? `Update ${copy.productLabel.toLowerCase()} details, variants and modifiers`
+          : `Update ${copy.productLabel.toLowerCase()} details and variants`
+      }
       actions={
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => dupMutation.mutate()} loading={dupMutation.isPending}>

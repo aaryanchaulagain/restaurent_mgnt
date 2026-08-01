@@ -65,6 +65,8 @@ export type PublicRestaurantDetail = {
   third_party_delivery_enabled: boolean;
   accepting_orders: boolean;
   is_open: boolean;
+  vendor_type?: string | null;
+  business_type?: string | null;
   today_hours?: Array<{ opens_at: string; closes_at: string; service_type: string }> | null;
   address_summary?: { suburb: string; state: string; postcode: string; address_line_1: string } | null;
   cuisines?: Array<{ name: string; slug: string; is_primary: boolean }>;

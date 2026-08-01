@@ -2,6 +2,26 @@ export type RestaurantProfile = {
   public_id: string;
   slug: string;
   trading_name: string;
+  /** Normalized vertical from businesses.business_type (or vendor_type fallback). */
+  business_type?: string | null;
+  /** Legacy restaurants.vendor_type (may use butchery). */
+  vendor_type?: string | null;
+  catalogue?: {
+    type: string;
+    label: string;
+    portal_label: string;
+    catalogue_label: string;
+    category_label: string;
+    product_label: string;
+    product_plural_label: string;
+    add_product_label: string;
+    supports_variants: boolean;
+    supports_modifiers: boolean;
+    supports_dietary: boolean;
+    supports_preparation_time: boolean;
+    supports_cuisine: boolean;
+    default_categories: string[];
+  };
   short_description?: string | null;
   description?: string | null;
   business_email?: string | null;

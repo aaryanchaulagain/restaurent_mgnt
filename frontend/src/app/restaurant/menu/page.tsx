@@ -12,14 +12,13 @@ import {
   restaurantMenuAdminApi,
   type AdminMenuItem,
 } from "@/features/restaurant/api/restaurant-admin-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { formatCents } from "@/lib/utils";
 
 type Filter = { category: string; status: string; availability: string; dietary: string; featured: string };
 
 export default function RestaurantMenuPage() {
-  const profile = useRestaurantProfile();
+  const { profile, brand, portalLabel, items: navItems, copy } = useRestaurantShell();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>({ category: "all", status: "all", availability: "all", dietary: "all", featured: "all" });
@@ -82,11 +81,11 @@ export default function RestaurantMenuPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
-      title="Menu"
-      subtitle="Categories, items, variants and availability"
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
+      title={copy.catalogueLabel}
+      subtitle={`${copy.categoryLabel}s, ${copy.productPluralLabel.toLowerCase()}, variants and availability`}
       actions={
         <div className="flex gap-2">
           {profile.data?.slug ? (
@@ -96,14 +95,31 @@ export default function RestaurantMenuPage() {
               </Button>
             </Link>
           ) : null}
-          <Link href="/restaurant/menu/categories"><Button variant="outline" size="sm">Categories</Button></Link>
-          <Link href="/restaurant/menu/modifiers"><Button variant="outline" size="sm">Modifiers</Button></Link>
-          <Link href="/restaurant/menu/create"><Button size="sm">Add item</Button></Link>
+          <Link href="/restaurant/menu/categories">
+            <Button variant="outline" size="sm">
+              {copy.categoryLabel}s
+            </Button>
+          </Link>
+          {copy.supportsModifiers ? (
+            <Link href="/restaurant/menu/modifiers">
+              <Button variant="outline" size="sm">
+                Modifiers
+              </Button>
+            </Link>
+          ) : null}
+          <Link href="/restaurant/menu/create">
+            <Button size="sm">{copy.addProductLabel}</Button>
+          </Link>
         </div>
       }
     >
       <div className="flex flex-wrap gap-3 mb-4">
-        <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search items" className="w-full sm:max-w-xs" />
+        <SearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={copy.searchPlaceholder}
+          className="w-full sm:max-w-xs"
+        />
         <Select value={filter.status} onChange={(e) => setFilter((f) => ({ ...f, status: e.target.value }))} className="w-36">
           <option value="all">All status</option>
           <option value="active">Active</option>
@@ -142,16 +158,20 @@ export default function RestaurantMenuPage() {
       {items.isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : items.isError ? (
-        <EmptyState title="Could not load menu" description="Check your connection and try again." action={<Button onClick={() => items.refetch()}>Retry</Button>} />
+        <EmptyState
+          title={`Could not load ${copy.catalogueLabel.toLowerCase()}`}
+          description="Check your connection and try again."
+          action={<Button onClick={() => items.refetch()}>Retry</Button>}
+        />
       ) : filtered.length === 0 ? (
-        <EmptyState title="No menu items" description="Create your first menu item to get started." />
+        <EmptyState title={copy.emptyCatalogueTitle} description={copy.emptyCatalogueDescription} />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-[var(--surface-muted)] text-[var(--text-muted)]">
               <tr>
                 <th className="px-3 py-2 w-8"><span className="sr-only">Select</span></th>
-                <th className="px-3 py-2">Item</th>
+                <th className="px-3 py-2">{copy.productLabel}</th>
                 <th className="px-3 py-2">Price</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Actions</th>

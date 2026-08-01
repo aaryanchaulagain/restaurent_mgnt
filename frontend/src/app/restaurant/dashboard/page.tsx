@@ -6,12 +6,11 @@ import { AdminShell } from "@/components/layout/admin-shell";
 import { StatCard } from "@/components/marketplace/cards";
 import { EmptyState, Skeleton } from "@/components/ui/feedback";
 import { DataTable } from "@/components/ui/table";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { restaurantOrderApi, type OrderDetail } from "@/features/orders/api/order-api";
 import { OrderStatusBadge } from "@/features/orders/components/order-status-badge";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
 import { readBranchDashboardContext } from "@/features/business/lib/branch-context";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { restaurantNav } from "@/lib/admin-nav";
 import { formatCents } from "@/lib/utils";
 
 /** Orders in these states never produced revenue. */
@@ -66,7 +65,7 @@ function orderTimestamp(order: OrderDetail): number {
 export default function RestaurantDashboardPage() {
   const { user } = useAuth();
   const tenantKey = useTenantKey();
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items } = useRestaurantShell();
 
   const ordersQuery = useQuery({
     queryKey: ["restaurant", user?.id ?? "anon", tenantKey, "dashboard-orders"],
@@ -137,9 +136,9 @@ export default function RestaurantDashboardPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={items}
       title="Dashboard"
       subtitle="Today’s service overview"
     >

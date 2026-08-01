@@ -8,14 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Checkbox } from "@/components/ui/forms";
 import { ConfirmDialog, Modal } from "@/components/ui/overlay";
 import { restaurantMenuAdminApi } from "@/features/restaurant/api/restaurant-admin-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { ApiError } from "@/lib/api/client";
 
 type Category = { public_id: string; name: string; is_active: boolean; sort_order: number };
 
 export default function MenuCategoriesPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items, copy } = useRestaurantShell();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Category | null>(null);
@@ -64,12 +63,12 @@ export default function MenuCategoriesPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
-      title="Menu categories"
-      subtitle="Create, reorder and manage categories"
-      actions={<Button size="sm" onClick={openCreate}>Add category</Button>}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={items}
+      title={`${copy.categoryLabel}s`}
+      subtitle={`Create, reorder and manage ${copy.categoryLabel.toLowerCase()}s`}
+      actions={<Button size="sm" onClick={openCreate}>Add {copy.categoryLabel.toLowerCase()}</Button>}
     >
       {categories.isLoading ? <Skeleton className="h-40 w-full" /> : (
         <ul className="space-y-2">

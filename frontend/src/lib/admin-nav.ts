@@ -1,3 +1,5 @@
+import { getBusinessTypeConfig } from "@/features/business/config/business-type-config";
+
 export const restaurantNav = [
   { href: "/restaurant/dashboard", label: "Dashboard" },
   { href: "/restaurant/branches", label: "Branches" },
@@ -11,6 +13,14 @@ export const restaurantNav = [
   { href: "/restaurant/settings", label: "Settings" },
   { href: "/restaurant/settings/payments", label: "Payments" },
 ];
+
+/** Same routes; catalogue nav label follows business type. */
+export function restaurantNavFor(businessType?: string | null) {
+  const copy = getBusinessTypeConfig(businessType);
+  return restaurantNav.map((item) =>
+    item.href === "/restaurant/menu" ? { ...item, label: copy.catalogueLabel } : item,
+  );
+}
 
 export const adminNav = [
   { href: "/admin/dashboard", label: "Dashboard" },
