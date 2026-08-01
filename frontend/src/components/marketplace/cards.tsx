@@ -24,7 +24,9 @@ export function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
           <Badge tone={restaurant.isOpen ? "success" : "error"}>
             {restaurant.isOpen ? "Open" : "Closed"}
           </Badge>
-          {restaurant.isPlatformRestaurant ? <Badge tone="accent">Official Suvakamana Restaurant</Badge> : null}
+          {restaurant.isPlatformRestaurant || restaurant.isFeaturedPartner ? (
+            <Badge tone="accent">Khana partner</Badge>
+          ) : null}
           {restaurant.offerLabel ? <Badge tone="accent">{restaurant.offerLabel}</Badge> : null}
         </div>
       </div>

@@ -13,7 +13,7 @@ describe("paymentErrorMessage", () => {
 
 describe("ownership-label", () => {
   it("maps ownership types", () => {
-    expect(ownershipLabel("first_party")).toBe("Suvakamana-owned");
+    expect(ownershipLabel("first_party")).toBe("Khana-operated");
     expect(ownershipLabel("third_party")).toBe("Partner restaurant");
   });
   it("maps revenue wording", () => {

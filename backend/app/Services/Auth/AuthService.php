@@ -56,7 +56,13 @@ class AuthService
     /**
      * @return array{status: string, user?: User, message?: string}
      */
-    public function attemptLogin(string $email, string $password, bool $remember, Request $request): array
+    public function attemptLogin(
+        string $email,
+        string $password,
+        bool $remember,
+        string $portal,
+        Request $request,
+    ): array
     {
         $email = Str::lower($email);
         $user = User::query()->where('email', $email)->first();
@@ -70,6 +76,18 @@ class AuthService
 
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],
+            ]);
+        }
+
+        if ($portal === 'super_admin' && ! $user->isSuperAdmin()) {
+            throw ValidationException::withMessages([
+                'email' => ['This account cannot access the super admin portal.'],
+            ]);
+        }
+
+        if ($portal !== 'super_admin' && $user->isSuperAdmin()) {
+            throw ValidationException::withMessages([
+                'email' => ['Super administrators must use the super admin login page.'],
             ]);
         }
 

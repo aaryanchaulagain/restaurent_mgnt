@@ -54,7 +54,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         name: "General",
         is_active: true,
       });
-      return res.data.category as { public_id: string; name: string };
+      return res.data.category;
     },
     onSuccess: (cat) => {
       qc.invalidateQueries({ queryKey: ["restaurant", restaurantKey, "categories"] });

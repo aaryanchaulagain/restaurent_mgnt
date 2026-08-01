@@ -22,6 +22,7 @@ function mapApiToCard(r: {
   is_platform_restaurant?: boolean;
   cover?: { card_url?: string; original_url?: string };
   logo?: { card_url?: string; original_url?: string };
+  is_featured_partner?: boolean;
 }): Restaurant {
   return {
     id: r.slug,
@@ -42,6 +43,7 @@ function mapApiToCard(r: {
     commissionRate: 0,
     offerLabel: undefined,
     isPlatformRestaurant: r.is_platform_restaurant ?? false,
+    isFeaturedPartner: r.is_featured_partner ?? false,
   };
 }
 
@@ -147,7 +149,7 @@ export default function RestaurantsPage() {
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
             {useMockFallback && demoFallbackEnabled
               ? "Demonstration listings (development only)"
-              : "Browse Suvakamana and partner restaurants with live menus."}
+              : "Browse restaurants, bakeries, butcheries and groceries on Khana."}
           </p>
         </div>
         <SearchInput
@@ -162,12 +164,12 @@ export default function RestaurantsPage() {
         <aside className="space-y-5 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-4 shadow-[var(--shadow-sm)]">
           <div>
             <p className="mb-2 text-xs font-semibold tracking-wider text-[var(--text-muted)] uppercase">
-              Restaurant type
+              Partner type
             </p>
             <Select value={ownership} onChange={(e) => setOwnership(e.target.value)}>
-              <option value="all">All restaurants</option>
-              <option value="first_party">Suvakamana official</option>
-              <option value="third_party">Partner restaurants</option>
+              <option value="all">All partners</option>
+              <option value="first_party">Khana-operated</option>
+              <option value="third_party">Partners</option>
             </Select>
           </div>
           <div>

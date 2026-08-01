@@ -98,8 +98,23 @@ class PublicImageService
         return array_merge($paths, ['urls' => $urls]);
     }
 
+    /**
+     * Resized variants need ext-gd. When it is unavailable we fall back to the
+     * original upload rather than failing the whole request.
+     */
+    private function canResize(): bool
+    {
+        return extension_loaded('gd')
+            && function_exists('imagecreatetruecolor')
+            && function_exists('imagecopyresampled');
+    }
+
     private function variant(string $sourcePath, string $dir, string $baseName, string $suffix, int $maxW, int $maxH): string
     {
+        if (! $this->canResize()) {
+            return $sourcePath;
+        }
+
         $absolute = Storage::disk('public')->path($sourcePath);
         if (! is_file($absolute)) {
             return $sourcePath;
@@ -121,6 +136,11 @@ class PublicImageService
         $nh = (int) max(1, floor($h * $scale));
 
         $dst = imagecreatetruecolor($nw, $nh);
+        if (! $dst) {
+            imagedestroy($src);
+
+            return $sourcePath;
+        }
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
 
         $target = "{$dir}/{$baseName}-{$suffix}.webp";
@@ -144,8 +164,8 @@ class PublicImageService
     private function createImage(string $path, int $type)
     {
         return match ($type) {
-            IMAGETYPE_JPEG => @imagecreatefromjpeg($path),
-            IMAGETYPE_PNG => @imagecreatefrompng($path),
+            IMAGETYPE_JPEG => function_exists('imagecreatefromjpeg') ? @imagecreatefromjpeg($path) : false,
+            IMAGETYPE_PNG => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : false,
             IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
             default => false,
         };

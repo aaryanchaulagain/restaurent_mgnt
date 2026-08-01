@@ -9,7 +9,7 @@ import { customerOrderApi } from "@/features/orders/api/order-api";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { paymentErrorMessage } from "@/features/payments/utils/payment-errors";
 
-const POLL_MS = 2500;
+const POLL_MS = 4000;
 const TIMEOUT_MS = 120_000;
 
 type PollerProps = {

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { clearRestaurantContext } from "@/features/restaurant/lib/restaurant-context";
+import { clearBranchDashboardContext } from "@/features/business/lib/branch-context";
 import { Button } from "@/components/ui/button";
 
 function useAdminLogout() {
@@ -14,6 +15,7 @@ function useAdminLogout() {
   return async function handleLogout() {
     try {
       clearRestaurantContext();
+      clearBranchDashboardContext();
       await logout();
     } finally {
       router.replace("/login");

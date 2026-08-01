@@ -18,7 +18,7 @@ export function AuthPageShell({
         href="/"
         className="font-[family-name:var(--font-display)] text-3xl text-[var(--text-primary)]"
       >
-        Suvakamana
+        Khana
       </Link>
       <h1 className="mt-4 text-4xl">{title}</h1>
       {subtitle ? (

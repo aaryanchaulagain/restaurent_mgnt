@@ -8,6 +8,7 @@ export type AdminRestaurantListItem = {
   business_email: string | null;
   status: string;
   ownership_type: string;
+  vendor_type?: string;
   accepting_orders: boolean;
   published_at: string | null;
   active_staff_count: number;
@@ -49,6 +50,7 @@ export type ProvisionPayload = {
   business_phone?: string;
   description?: string;
   ownership_type?: "first_party" | "third_party";
+  vendor_type?: "restaurant" | "bakery" | "butchery" | "grocery";
   activate_now?: boolean;
   commission_rate?: number;
   owner: {
@@ -74,6 +76,7 @@ export const adminRestaurantApi = {
   list(params?: {
     status?: string;
     ownership_type?: string;
+    vendor_type?: string;
     q?: string;
     page?: number;
     per_page?: number;

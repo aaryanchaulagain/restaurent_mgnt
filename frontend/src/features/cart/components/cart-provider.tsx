@@ -51,10 +51,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
+      cartApi.updateItem(id, { quantity }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => cartApi.removeItem(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+  });
+
+  const addMutateAsync = addMutation.mutateAsync;
+  const updateMutateAsync = updateMutation.mutateAsync;
+  const removeMutateAsync = removeMutation.mutateAsync;
+
   const addItem = useCallback(
     async (payload: AddItemPayload) => {
       try {
-        await addMutation.mutateAsync(payload);
+        await addMutateAsync(payload);
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) {
           const meta = (e.envelope?.data ?? null) as ConflictState["data"];
@@ -64,7 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         throw e;
       }
     },
-    [addMutation],
+    [addMutateAsync],
   );
 
   const clearConflict = useCallback(() => setConflict(emptyConflict), []);
@@ -72,52 +87,56 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const confirmReplaceRestaurant = useCallback(async () => {
     if (!conflict.pending) return;
     try {
-      await addMutation.mutateAsync({ ...conflict.pending, replace_restaurant: true });
+      await addMutateAsync({ ...conflict.pending, replace_restaurant: true });
       setConflict(emptyConflict);
     } catch (e) {
       setConflict(emptyConflict);
       throw e;
     }
-  }, [addMutation, conflict.pending]);
+  }, [addMutateAsync, conflict.pending]);
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, quantity }: { id: string; quantity: number }) => cartApi.updateItem(id, { quantity }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
-  });
+  const updateQuantity = useCallback(
+    async (id: string, quantity: number) => {
+      await updateMutateAsync({ id, quantity });
+    },
+    [updateMutateAsync],
+  );
 
-  const removeMutation = useMutation({
-    mutationFn: (id: string) => cartApi.removeItem(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
-  });
+  const removeLine = useCallback(
+    async (id: string) => {
+      await removeMutateAsync(id);
+    },
+    [removeMutateAsync],
+  );
 
-  const value: CartContextValue = useMemo(
+  const refetch = useCallback(() => {
+    void query.refetch();
+  }, [query.refetch]);
+
+  const value = useMemo<CartContextValue>(
     () => ({
       cart: query.data?.cart ?? null,
       pricing: query.data?.pricing ?? null,
       itemCount: query.data?.cart?.items.reduce((s, i) => s + i.quantity, 0) ?? 0,
       isLoading: query.isLoading,
-      refetch: () => void query.refetch(),
+      refetch,
       addItem,
       conflict,
       clearConflict,
       confirmReplaceRestaurant,
-      updateQuantity: async (id, quantity) => {
-        await updateMutation.mutateAsync({ id, quantity });
-      },
-      removeLine: async (id) => {
-        await removeMutation.mutateAsync(id);
-      },
+      updateQuantity,
+      removeLine,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- query.data and query.isLoading are the reactive values we need; query object identity changes on every render
     [
       query.data,
       query.isLoading,
+      refetch,
       addItem,
       conflict,
       clearConflict,
       confirmReplaceRestaurant,
-      updateMutation,
-      removeMutation,
+      updateQuantity,
+      removeLine,
     ],
   );
 

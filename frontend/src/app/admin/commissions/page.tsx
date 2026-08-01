@@ -8,7 +8,7 @@ import { adminNav } from "@/lib/admin-nav";
 export default function AdminCommissionsPage() {
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Commissions"

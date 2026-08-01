@@ -44,10 +44,20 @@ class AdminRestaurantProvisionTest extends TestCase
 
         $restaurant = Restaurant::query()->where('trading_name', 'Sold Panels Kitchen')->first();
         $this->assertNotNull($restaurant);
+        $this->assertNotNull($restaurant->business_id);
+        $this->assertNotNull($restaurant->branch_id);
         $this->assertDatabaseHas('restaurant_users', [
             'restaurant_id' => $restaurant->id,
             'status' => 'active',
         ]);
+        $this->assertDatabaseHas('businesses', ['id' => $restaurant->business_id]);
+        $this->assertDatabaseHas('branches', [
+            'id' => $restaurant->branch_id,
+            'restaurant_id' => $restaurant->id,
+            'is_default' => 1,
+        ]);
+        $response->assertJsonPath('data.business.id', $restaurant->business_id)
+            ->assertJsonPath('data.branch.id', $restaurant->branch_id);
 
         $owner = User::query()->where('email', 'sold-owner@example.com')->firstOrFail();
         Sanctum::actingAs($owner);
@@ -66,7 +76,7 @@ class AdminRestaurantProvisionTest extends TestCase
 
         $this->getJson('/api/v1/restaurant/ping')
             ->assertForbidden()
-            ->assertJsonPath('code', 'RESTAURANT_CONTEXT_REQUIRED');
+            ->assertJsonPath('code', 'BRANCH_CONTEXT_REQUIRED');
 
         $this->withHeader('X-Restaurant-Id', $restaurant->public_id)
             ->getJson('/api/v1/restaurant/ping')
@@ -81,9 +91,17 @@ class AdminRestaurantProvisionTest extends TestCase
         $b = $this->makeRestaurant('kitchen-b');
         $owner = $this->restaurantOwner($a);
 
+        // Link hierarchy so branch-aware middleware can resolve.
+        app(\App\Services\Business\BusinessHierarchyMigrator::class)->migrateRestaurant($a);
+        app(\App\Services\Business\BusinessHierarchyMigrator::class)->migrateRestaurant($b);
+
         Sanctum::actingAs($owner);
 
-        $this->withHeader('X-Restaurant-Id', $b->public_id)
+        $this->withHeader('X-Restaurant-Id', $b->fresh()->public_id)
+            ->getJson('/api/v1/restaurant/ping')
+            ->assertNotFound();
+
+        $this->withHeader('X-Restaurant-Id', $a->fresh()->public_id)
             ->getJson('/api/v1/restaurant/ping')
             ->assertOk()
             ->assertJsonPath('data.restaurant_id', $a->id);

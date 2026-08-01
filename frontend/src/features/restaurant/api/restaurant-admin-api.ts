@@ -128,7 +128,10 @@ export const restaurantMenuAdminApi = {
     });
   },
   createCategory(body: Record<string, unknown>) {
-    return apiRequest("/api/v1/restaurant/menu-categories", { method: "POST", body });
+    return apiRequest<{ category: { public_id: string; name: string; is_active: boolean; sort_order: number } }>(
+      "/api/v1/restaurant/menu-categories",
+      { method: "POST", body },
+    );
   },
   updateCategory(publicId: string, body: Record<string, unknown>) {
     return apiRequest(`/api/v1/restaurant/menu-categories/${publicId}`, { method: "PATCH", body });

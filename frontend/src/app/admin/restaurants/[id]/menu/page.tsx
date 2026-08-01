@@ -83,7 +83,7 @@ export default function AdminRestaurantMenuPage({
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title={`${name} · Menus`}

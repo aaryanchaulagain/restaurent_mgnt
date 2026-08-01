@@ -29,6 +29,6 @@ export const adminOrderApi = {
 };
 
 export function ownershipLabel(type?: string): string {
-  if (type === "first_party") return "Suvakamana-owned";
+  if (type === "first_party") return "Khana-operated";
   return "Partner restaurant";
 }

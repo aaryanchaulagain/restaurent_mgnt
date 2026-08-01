@@ -38,7 +38,8 @@ export default function RestaurantOrdersPage() {
   const orders = useQuery({
     queryKey: ["restaurant-orders", tab],
     queryFn: async () => (await restaurantOrderApi.list(tab || undefined)).data.orders,
-    refetchInterval: 8000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
   });
 
   const acceptMut = useMutation({

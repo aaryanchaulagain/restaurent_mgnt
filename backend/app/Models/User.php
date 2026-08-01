@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BusinessRoles;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -74,6 +75,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function restaurantUsers(): HasMany
     {
         return $this->hasMany(RestaurantUser::class);
+    }
+
+    public function businessUsers(): HasMany
+    {
+        return $this->hasMany(BusinessUser::class);
+    }
+
+    public function branchUsers(): HasMany
+    {
+        return $this->hasMany(BranchUser::class);
     }
 
     public function mfaMethod(): HasOne
@@ -161,5 +172,49 @@ class User extends Authenticatable implements MustVerifyEmail
             ->first();
 
         return $assignment?->restaurant?->public_id;
+    }
+
+    public function belongsToBusiness(int $businessId): bool
+    {
+        return $this->businessUsers()
+            ->where('business_id', $businessId)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    public function canAccessBusiness(int $businessId): bool
+    {
+        return $this->isSuperAdmin() || $this->belongsToBusiness($businessId);
+    }
+
+    public function belongsToBranch(int $branchId): bool
+    {
+        return $this->branchUsers()
+            ->where('branch_id', $branchId)
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    public function canAccessBranch(int $branchId): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $branch = Branch::query()->find($branchId);
+        if (! $branch) {
+            return false;
+        }
+
+        $businessRole = $this->businessUsers()
+            ->where('business_id', $branch->business_id)
+            ->where('status', 'active')
+            ->value('role');
+
+        if (in_array($businessRole, BusinessRoles::businessManagers(), true)) {
+            return true;
+        }
+
+        return $this->belongsToBranch($branchId);
     }
 }

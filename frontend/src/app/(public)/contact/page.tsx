@@ -23,8 +23,8 @@ export default function ContactPage() {
         Contact
       </h1>
       <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
-        Questions about orders, partnerships, or the Suvakamana platform? Send us a message —
-        or visit Suvakamana Restaurant in Sydney.
+        Questions about orders, partnerships, or the Khana platform? Send us a message —
+        or visit our partner Suvakamana Restaurant in Sydney.
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">

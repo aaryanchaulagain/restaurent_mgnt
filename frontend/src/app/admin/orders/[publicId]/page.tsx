@@ -23,7 +23,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ pub
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title={o ? `Order ${o.order_number}` : "Order"}

@@ -54,15 +54,19 @@ class HealthController extends Controller
             DB::connection()->getPdo();
             DB::select('select 1');
 
-            $charset = DB::selectOne('select @@character_set_database as charset, @@collation_database as collation');
+            $driver = DB::connection()->getDriverName();
+            $details = ['driver' => $driver];
+
+            if ($driver === 'mysql') {
+                $charset = DB::selectOne('select @@character_set_database as charset, @@collation_database as collation');
+                $details['charset'] = $charset->charset ?? null;
+                $details['collation'] = $charset->collation ?? null;
+            }
 
             return [
                 'ok' => true,
-                'message' => 'MySQL connection successful.',
-                'details' => [
-                    'charset' => $charset->charset ?? null,
-                    'collation' => $charset->collation ?? null,
-                ],
+                'message' => strtoupper($driver).' connection successful.',
+                'details' => $details,
             ];
         } catch (Throwable $e) {
             report($e);

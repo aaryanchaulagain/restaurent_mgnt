@@ -8,6 +8,7 @@ import {
   hasAnyRole,
   hasPermission,
   isAccountBlocked,
+  isCustomer,
   isRestaurantUser,
   isSuperAdmin,
 } from "../utils/roles";
@@ -69,6 +70,16 @@ export function AuthGuard({
     }
 
     if (roles && !hasAnyRole(user, roles)) {
+      // Partners hitting customer-only pages (e.g. old /profile links) go home to their portal,
+      // not a dead-end forbidden screen.
+      if (isRestaurantUser(user) && roles.includes("customer")) {
+        router.replace("/restaurant/dashboard");
+        return;
+      }
+      if (isSuperAdmin(user)) {
+        router.replace("/admin/dashboard");
+        return;
+      }
       router.replace("/forbidden");
       return;
     }
@@ -130,8 +141,12 @@ export function GuestGuard({ children }: { children: ReactNode }) {
       router.replace("/admin/dashboard");
     } else if (isRestaurantUser(user)) {
       router.replace("/restaurant/dashboard");
-    } else {
+    } else if (isCustomer(user)) {
       router.replace("/profile");
+    } else {
+      // No role area to land on; sending them to a guarded page would bounce
+      // back here through /forbidden and trap them in a redirect loop.
+      router.replace("/");
     }
   }, [isLoading, status, user, router]);
 
@@ -140,6 +155,31 @@ export function GuestGuard({ children }: { children: ReactNode }) {
   }
 
   if (status === "authenticated" && user) {
+    return <GuardShell>Redirecting…</GuardShell>;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Guest guard for /superadmin/login. The page stays publicly reachable for guests,
+ * customers and restaurant users; only a signed-in super admin is sent to the dashboard.
+ */
+export function SuperAdminGuestGuard({ children }: { children: ReactNode }) {
+  const { user, status, isLoading } = useAuth();
+  const router = useRouter();
+  const alreadySuperAdmin = status === "authenticated" && Boolean(user) && isSuperAdmin(user);
+
+  useEffect(() => {
+    if (isLoading || !alreadySuperAdmin) return;
+    router.replace("/admin/dashboard");
+  }, [isLoading, alreadySuperAdmin, router]);
+
+  if (isLoading) {
+    return <GuardShell>Loading…</GuardShell>;
+  }
+
+  if (alreadySuperAdmin) {
     return <GuardShell>Redirecting…</GuardShell>;
   }
 

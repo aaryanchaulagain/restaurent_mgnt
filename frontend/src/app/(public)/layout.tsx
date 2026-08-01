@@ -1,9 +1,7 @@
 import Link from "next/link";
-import {
-  MobileBottomNav,
-  SiteFooter,
-  SiteHeader,
-} from "@/components/layout/site-chrome";
+import { MobileBottomNav, SiteHeader } from "@/components/layout/site-chrome";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { RouteWarmer } from "@/components/layout/route-warmer";
 import { PublicProviders } from "./providers";
 
 export default function PublicLayout({
@@ -20,6 +18,7 @@ export default function PublicLayout({
       <div className="sr-only">
         <Link href="/cart">Cart</Link>
       </div>
+      <RouteWarmer />
     </PublicProviders>
   );
 }

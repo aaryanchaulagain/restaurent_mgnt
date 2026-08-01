@@ -24,6 +24,22 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .hero-fade {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 html,
 body {
   max-width: 100%;
@@ -34,6 +50,7 @@ body {
   background: var(--surface-page);
   color: var(--text-primary);
   font-family: var(--font-body);
+  text-rendering: optimizeLegibility;
 }
 
 h1,
@@ -48,12 +65,132 @@ h4 {
   background: rgba(216, 102, 45, 0.2);
 }
 
+/* Cheap static grain (no SVG feTurbulence during scroll/paint). */
 .texture-grain::before {
   content: "";
   pointer-events: none;
   position: absolute;
   inset: 0;
-  opacity: 0.045;
-  background-image: var(--texture-grain);
+  opacity: 0.04;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.35) 0.6px, transparent 0.7px);
+  background-size: 3px 3px;
   mix-blend-mode: multiply;
+  contain: strict;
+}
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-fade {
+  animation: hero-fade-up 0.45s ease-out both;
+}
+
+.hero-fade-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.hero-fade-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.hero-fade-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.menu-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
+.menu-item-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
+}
+
+/* Overlay + toast motion (replaces framer-motion on these paths). */
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes motion-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes motion-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.motion-fade {
+  animation: motion-fade-in var(--duration-base) var(--ease-out-premium) both;
+}
+
+.motion-rise {
+  animation: motion-rise-in 0.28s var(--ease-out-premium) both;
+}
+
+.motion-pop {
+  animation: motion-pop-in var(--duration-base) var(--ease-out-premium) both;
+}
+
+.motion-slide-right {
+  animation: motion-slide-in-right 0.32s var(--ease-out-premium) both;
+}
+
+.motion-slide-left {
+  animation: motion-slide-in-left 0.32s var(--ease-out-premium) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-fade,
+  .motion-rise,
+  .motion-pop,
+  .motion-slide-right,
+  .motion-slide-left {
+    animation: none !important;
+  }
 }

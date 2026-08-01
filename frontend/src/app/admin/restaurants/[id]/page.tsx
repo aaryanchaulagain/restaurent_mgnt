@@ -114,13 +114,13 @@ export default function AdminRestaurantDetailPage({
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title={restaurant?.trading_name ?? "Restaurant"}
       subtitle={
         restaurant
-          ? `${restaurant.slug} · ${restaurant.ownership_type === "first_party" ? "Suvakamana-owned" : "Partner"}`
+          ? `${restaurant.slug} · ${restaurant.ownership_type === "first_party" ? "Khana-operated" : "Partner"}`
           : undefined
       }
       actions={

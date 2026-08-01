@@ -190,9 +190,12 @@ class RestaurantMenuController extends Controller
             ->where('public_id', $data['menu_category_public_id'])
             ->first();
         if (! $category) {
-            throw ValidationException::withMessages([
-                'menu_category_public_id' => ['Category not found for this restaurant. Pick or create a category again.'],
-            ]);
+            abort(ApiResponse::error(
+                'Category not found for this restaurant. Pick or create a category again.',
+                404,
+                errors: ['menu_category_public_id' => ['Category not found for this restaurant. Pick or create a category again.']],
+                code: 'CATEGORY_NOT_FOUND',
+            ));
         }
         if ($data['compare_at_price_cents'] ?? null) {
             if ($data['compare_at_price_cents'] <= $data['base_price_cents']) {

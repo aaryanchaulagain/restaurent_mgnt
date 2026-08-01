@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Plus_Jakarta_Sans } from "next/font/google";
-import { ToastProvider } from "@/components/ui/navigation";
+import { ToastProvider } from "@/components/ui/toast";
 import { AppProviders } from "@/components/providers";
 import "./globals.css";
 
@@ -17,11 +17,11 @@ const body = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Suvakamana",
-    template: "%s · Suvakamana",
+    default: "Khana",
+    template: "%s · Khana",
   },
   description:
-    "Exceptional food, delivered from restaurants you love. Discover local flavours and premium restaurants.",
+    "Khana — restaurants, bakeries, butcheries and groceries in one marketplace.",
 };
 
 export default function RootLayout({

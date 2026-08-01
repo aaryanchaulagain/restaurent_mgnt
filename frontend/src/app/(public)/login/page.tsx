@@ -9,23 +9,13 @@ export default function LoginPage() {
     <GuestGuard>
       <AuthPageShell
         title="Welcome back"
-        subtitle="Sign in to track orders, reorder favourites and manage addresses."
+        subtitle="Sign in to your customer or partner account."
         footer={
           <>
             New here?{" "}
             <Link href="/register" className="font-semibold text-[var(--color-burnt-orange)]">
               Create an account
             </Link>
-            <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-              Restaurant staff?{" "}
-              <Link href="/restaurant/dashboard" className="underline">
-                Restaurant portal
-              </Link>{" "}
-              ·{" "}
-              <Link href="/admin/dashboard" className="underline">
-                Super admin
-              </Link>
-            </p>
           </>
         }
       >

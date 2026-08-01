@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Restaurant\RestaurantMembershipService;
 use App\Services\Restaurant\RestaurantProvisionService;
 use App\Support\ApiResponse;
+use App\Support\VendorTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,9 @@ class AdminRestaurantController extends Controller
         }
         if ($request->filled('ownership_type')) {
             $query->where('ownership_type', $request->string('ownership_type'));
+        }
+        if ($request->filled('vendor_type')) {
+            $query->where('vendor_type', $request->string('vendor_type'));
         }
         if ($request->filled('q')) {
             $q = '%'.$request->string('q').'%';
@@ -82,6 +86,7 @@ class AdminRestaurantController extends Controller
             'business_phone' => ['nullable', 'string', 'max:40'],
             'description' => ['nullable', 'string', 'max:5000'],
             'ownership_type' => ['nullable', Rule::in(['first_party', 'third_party'])],
+            'vendor_type' => ['nullable', Rule::in(VendorTypes::all())],
             'activate_now' => ['sometimes', 'boolean'],
             'commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'owner.first_name' => ['required', 'string', 'max:80'],
@@ -101,7 +106,19 @@ class AdminRestaurantController extends Controller
                 'name' => $result['owner']->name,
             ],
             'temporary_password' => $result['temporary_password'],
-        ], message: 'Restaurant and owner provisioned.', status: 201);
+            'business' => [
+                'id' => $result['business']->id,
+                'public_id' => $result['business']->public_id,
+                'name' => $result['business']->name,
+                'slug' => $result['business']->slug,
+            ],
+            'branch' => [
+                'id' => $result['branch']->id,
+                'public_id' => $result['branch']->public_id,
+                'name' => $result['branch']->name,
+                'code' => $result['branch']->code,
+            ],
+        ], message: 'Partner business and owner provisioned.', status: 201);
     }
 
     public function update(Request $request, string $publicId)
@@ -210,6 +227,7 @@ class AdminRestaurantController extends Controller
             'business_email' => $r->business_email,
             'status' => $r->status?->value ?? $r->status,
             'ownership_type' => $r->ownership_type,
+            'vendor_type' => $r->vendor_type ?: VendorTypes::RESTAURANT,
             'accepting_orders' => (bool) $r->accepting_orders,
             'published_at' => $r->published_at,
             'active_staff_count' => (int) ($r->active_staff_count ?? 0),

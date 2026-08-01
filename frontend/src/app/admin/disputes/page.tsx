@@ -21,7 +21,7 @@ export default function AdminDisputesPage() {
   const rows = disputes.data ?? [];
 
   return (
-    <AdminShell brand="Suvakamana" portalLabel="Super Admin" items={adminNav} title="Disputes" subtitle="Payment disputes from Stripe">
+    <AdminShell brand="Khana" portalLabel="Super Admin" items={adminNav} title="Disputes" subtitle="Payment disputes from Stripe">
       <Field label="Status" className="mb-4 max-w-xs">
         <Select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All</option>

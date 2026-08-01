@@ -3,26 +3,41 @@
 namespace App\Services\Order;
 
 use App\Models\OrderNumberSequence;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class OrderNumberGenerator
 {
-    public function generate(): string
+    /**
+     * Allocate the next daily order sequence using a canonical Y-m-d key.
+     *
+     * Uses insertOrIgnore so concurrent first-of-day creators do not race on the
+     * unique date constraint, then locks and increments the existing row.
+     */
+    public function generate(?\DateTimeInterface $at = null): string
     {
-        $date = now()->toDateString();
+        $moment = $at ? Carbon::parse($at) : now();
+        $date = $moment->toDateString();
+        $ymd = $moment->format('Ymd');
 
         $seq = DB::transaction(function () use ($date) {
-            $row = OrderNumberSequence::query()->lockForUpdate()->where('date', $date)->first();
-            if ($row) {
-                $row->increment('last_sequence');
+            DB::table('order_number_sequences')->insertOrIgnore([
+                'date' => $date,
+                'last_sequence' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-                return $row->last_sequence;
-            }
-            $row = OrderNumberSequence::query()->create(['date' => $date, 'last_sequence' => 1]);
+            $row = OrderNumberSequence::query()
+                ->where('date', $date)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            return 1;
+            $row->increment('last_sequence');
+
+            return (int) $row->fresh()->last_sequence;
         });
 
-        return sprintf('SVK-%s-%06d', now()->format('Ymd'), $seq);
+        return sprintf('SVK-%s-%06d', $ymd, $seq);
     }
 }

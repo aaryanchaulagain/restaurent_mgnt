@@ -106,6 +106,7 @@ class PasswordAndSessionTest extends TestCase
         $login = $this->postJson('/api/auth/login', [
             'email' => 'admin@example.com',
             'password' => 'Password1!',
+            'portal' => 'super_admin',
         ]);
         $login->assertOk()->assertJsonPath('data.mfa_required', true);
 

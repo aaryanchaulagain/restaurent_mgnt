@@ -10,11 +10,16 @@ use App\Domain\Payments\Contracts\RefundProvider;
 use App\Domain\Payments\Providers\Stripe\StripeConnectedAccountProvider;
 use App\Domain\Payments\Providers\Stripe\StripePaymentProvider;
 use App\Domain\Payments\Providers\Stripe\StripeRefundProvider;
+use App\Models\Branch;
+use App\Models\Business;
 use App\Models\User;
+use App\Policies\BranchPolicy;
+use App\Policies\BusinessPolicy;
 use App\Policies\RestaurantPolicy;
 use App\Services\Partner\LocalAbnVerificationService;
 use App\Services\Partner\NullDocumentScanner;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use App\Events\Order\OrderAccepted;
 use App\Events\Order\OrderCancelled;
 use App\Events\Order\OrderCompleted;
@@ -54,6 +59,23 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-restaurant', [RestaurantPolicy::class, 'access']);
         Gate::define('access-admin', function (User $user): bool {
             return $user->isSuperAdmin() && $user->hasPermission('view_super_admin_dashboard');
+        });
+
+        Gate::policy(Business::class, BusinessPolicy::class);
+        Gate::policy(Branch::class, BranchPolicy::class);
+
+        Route::bind('business', function (string $value) {
+            return Business::query()->where('public_id', $value)->firstOrFail();
+        });
+
+        Route::bind('branch', function (string $value, $route) {
+            $query = Branch::query()->where('public_id', $value);
+            $business = $route->parameter('business');
+            if ($business instanceof Business) {
+                $query->where('business_id', $business->id);
+            }
+
+            return $query->firstOrFail();
         });
 
         $notify = SendOrderDomainNotifications::class;

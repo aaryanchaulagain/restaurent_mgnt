@@ -83,29 +83,67 @@ type RequestOptions = {
   skipCsrf?: boolean;
   /** When set, sends X-Restaurant-Id (super-admin restaurant context). */
   restaurantPublicId?: string | null;
+  branchPublicId?: string | null;
+  businessPublicId?: string | null;
 };
 
-function restaurantContextHeader(
+function tenantContextHeaders(
   path: string,
-  explicit?: string | null,
+  explicit?: {
+    restaurantPublicId?: string | null;
+    branchPublicId?: string | null;
+    businessPublicId?: string | null;
+  },
 ): Record<string, string> {
   const isRestaurantApi =
     path.includes("/api/v1/restaurant/") || path.includes("/restaurant/");
   if (!isRestaurantApi) return {};
 
-  let publicId = explicit;
+  const headers: Record<string, string> = {};
+
+  let branchId = explicit?.branchPublicId;
+  if (branchId === undefined && typeof window !== "undefined") {
+    branchId = window.localStorage.getItem("khana_branch_context_public_id");
+  }
+  if (branchId) {
+    headers["X-Branch-Id"] = branchId;
+  }
+
+  let businessId = explicit?.businessPublicId;
+  if (businessId === undefined && typeof window !== "undefined") {
+    businessId = window.localStorage.getItem("khana_business_context_public_id");
+  }
+  if (businessId) {
+    headers["X-Business-Id"] = businessId;
+  }
+
+  // Prefer branch; still send restaurant for legacy super-admin flows when no branch.
+  let publicId = explicit?.restaurantPublicId;
   if (publicId === undefined && typeof window !== "undefined") {
     publicId = window.localStorage.getItem("suvakamana_restaurant_context_public_id");
   }
-  if (!publicId) return {};
-  return { "X-Restaurant-Id": publicId };
+  if (publicId && !branchId) {
+    headers["X-Restaurant-Id"] = publicId;
+  } else if (publicId && branchId) {
+    // Do not send mismatched restaurant with branch; server resolves restaurant.
+  }
+
+  return headers;
 }
 
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<ApiEnvelope<T>> {
-  const { method = "GET", body, headers = {}, skipCsrf = false, restaurantPublicId } = options;
+  const {
+    method = "GET",
+    body,
+    headers = {},
+    skipCsrf = false,
+    restaurantPublicId,
+    branchPublicId,
+    businessPublicId,
+  } = options;
 
   if (!skipCsrf && method !== "GET" && method !== "HEAD") {
     await ensureCsrf();
@@ -120,7 +158,7 @@ export async function apiRequest<T>(
       "X-Requested-With": "XMLHttpRequest",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(xsrf ? { "X-XSRF-TOKEN": xsrf } : {}),
-      ...restaurantContextHeader(path, restaurantPublicId),
+      ...tenantContextHeaders(path, { restaurantPublicId, branchPublicId, businessPublicId }),
       ...headers,
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -140,17 +178,22 @@ export async function apiRequest<T>(
     }
     if (
       envelope?.code === "RESTAURANT_NOT_FOUND" ||
-      envelope?.code === "RESTAURANT_CONTEXT_REQUIRED"
+      envelope?.code === "RESTAURANT_CONTEXT_REQUIRED" ||
+      envelope?.code === "BRANCH_CONTEXT_REQUIRED" ||
+      envelope?.code === "BRANCH_ACCESS_DENIED" ||
+      envelope?.code === "BRANCH_NOT_FOUND"
     ) {
       if (typeof window !== "undefined") {
         window.localStorage.removeItem("suvakamana_restaurant_context_public_id");
+        window.localStorage.removeItem("khana_branch_context_public_id");
       }
     }
     throw new ApiError(
       envelope?.code === "RESTAURANT_NOT_FOUND"
-        ? "Restaurant context expired. Go to Admin → Menus and click Add item to Suvakamana again."
-        : envelope?.code === "RESTAURANT_CONTEXT_REQUIRED"
-          ? "No restaurant selected. Go to Admin → Menus and choose a restaurant first."
+        ? "Restaurant context expired. Select a branch again."
+        : envelope?.code === "RESTAURANT_CONTEXT_REQUIRED" ||
+            envelope?.code === "BRANCH_CONTEXT_REQUIRED"
+          ? "No branch selected. Choose a branch from the switcher."
           : (envelope?.message ?? `Request failed (${response.status})`),
       response.status,
       envelope?.errors ?? null,
@@ -178,7 +221,7 @@ export async function apiFormData<T>(
     headers: {
       Accept: "application/json",
       "X-Requested-With": "XMLHttpRequest",
-      ...restaurantContextHeader(path),
+      ...tenantContextHeaders(path),
       ...(xsrf ? { "X-XSRF-TOKEN": xsrf } : {}),
     },
     body: formData,
@@ -198,17 +241,22 @@ export async function apiFormData<T>(
     }
     if (
       envelope?.code === "RESTAURANT_NOT_FOUND" ||
-      envelope?.code === "RESTAURANT_CONTEXT_REQUIRED"
+      envelope?.code === "RESTAURANT_CONTEXT_REQUIRED" ||
+      envelope?.code === "BRANCH_CONTEXT_REQUIRED" ||
+      envelope?.code === "BRANCH_ACCESS_DENIED" ||
+      envelope?.code === "BRANCH_NOT_FOUND"
     ) {
       if (typeof window !== "undefined") {
         window.localStorage.removeItem("suvakamana_restaurant_context_public_id");
+        window.localStorage.removeItem("khana_branch_context_public_id");
       }
     }
     throw new ApiError(
       envelope?.code === "RESTAURANT_NOT_FOUND"
-        ? "Restaurant context expired. Go to Admin → Menus and click Add item to Suvakamana again."
-        : envelope?.code === "RESTAURANT_CONTEXT_REQUIRED"
-          ? "No restaurant selected. Go to Admin → Menus and choose a restaurant first."
+        ? "Restaurant context expired. Select a branch again."
+        : envelope?.code === "RESTAURANT_CONTEXT_REQUIRED" ||
+            envelope?.code === "BRANCH_CONTEXT_REQUIRED"
+          ? "No branch selected. Choose a branch from the switcher."
           : (envelope?.message ?? `Request failed (${response.status})`),
       response.status,
       envelope?.errors ?? null,

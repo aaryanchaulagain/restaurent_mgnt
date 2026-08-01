@@ -1,5 +1,6 @@
 export const restaurantNav = [
   { href: "/restaurant/dashboard", label: "Dashboard" },
+  { href: "/restaurant/branches", label: "Branches" },
   { href: "/restaurant/orders", label: "Orders" },
   { href: "/restaurant/menu", label: "Menu" },
   { href: "/restaurant/offers", label: "Offers" },
@@ -15,7 +16,7 @@ export const adminNav = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/applications", label: "Applications" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/restaurants", label: "Restaurants" },
+  { href: "/admin/restaurants", label: "Partners" },
   { href: "/admin/menus", label: "Menus" },
   { href: "/admin/commissions", label: "Commissions" },
   { href: "/admin/settlements", label: "Settlements" },

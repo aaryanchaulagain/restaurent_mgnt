@@ -36,7 +36,7 @@ export default function AdminOrdersPage() {
   const rows = orders.data?.orders ?? [];
 
   return (
-    <AdminShell brand="Suvakamana" portalLabel="Super Admin" items={adminNav} title="Platform orders" subtitle="Operational visibility across all restaurants">
+    <AdminShell brand="Khana" portalLabel="Super Admin" items={adminNav} title="Platform orders" subtitle="Operational visibility across all restaurants">
       <div className="mb-6 grid gap-4 rounded-lg border bg-white p-4 sm:grid-cols-3">
         <Field label="Order number"><Input value={orderNumber} onChange={(e) => { setOrderNumber(e.target.value); setPage(1); }} placeholder="SVK-" /></Field>
         <Field label="Status">
@@ -53,7 +53,7 @@ export default function AdminOrdersPage() {
         <Field label="Ownership">
           <Select value={ownership} onChange={(e) => { setOwnership(e.target.value); setPage(1); }}>
             <option value="">All</option>
-            <option value="first_party">Suvakamana-owned</option>
+            <option value="first_party">Khana-operated</option>
             <option value="third_party">Partner restaurant</option>
           </Select>
         </Field>

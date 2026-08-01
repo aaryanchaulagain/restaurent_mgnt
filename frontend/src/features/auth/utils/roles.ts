@@ -1,9 +1,17 @@
 import type { AuthUser, RoleSlug } from "../types";
 
-const RESTAURANT_ROLES: RoleSlug[] = [
+const RESTAURANT_ROLES: Array<RoleSlug | string> = [
   "restaurant_owner",
   "restaurant_manager",
   "restaurant_staff",
+  "business_owner",
+  "business_admin",
+  "accountant",
+  "branch_manager",
+  "order_manager",
+  "kitchen_staff",
+  "inventory_manager",
+  "delivery_staff",
 ];
 
 export function hasRole(user: AuthUser | null | undefined, role: RoleSlug | string): boolean {
@@ -29,7 +37,11 @@ export function isCustomer(user: AuthUser | null | undefined): boolean {
 }
 
 export function isRestaurantUser(user: AuthUser | null | undefined): boolean {
-  return hasAnyRole(user, RESTAURANT_ROLES);
+  return Boolean(
+    user &&
+      (hasAnyRole(user, RESTAURANT_ROLES) ||
+        user.restaurants?.some((assignment) => assignment.status === "active")),
+  );
 }
 
 export function isSuperAdmin(user: AuthUser | null | undefined): boolean {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminBranchController;
 use App\Http\Controllers\Api\Admin\AdminDisputeController;
 use App\Http\Controllers\Api\Admin\AdminOrderController;
 use App\Http\Controllers\Api\Admin\AdminPaymentAccountController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\Admin\AdminRestaurantController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\Partner\PartnerApplicationController;
+use App\Http\Controllers\Api\Business\BusinessBranchController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Checkout\CheckoutController;
 use App\Http\Controllers\Api\Customer\CustomerAddressController;
@@ -141,6 +143,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
             'portal' => 'restaurant',
             'restaurant_id' => request()->attributes->get('restaurant_id'),
             'restaurant_public_id' => request()->attributes->get('restaurant_public_id'),
+            'business_id' => request()->attributes->get('business_id'),
+            'business_public_id' => request()->attributes->get('business_public_id'),
+            'branch_id' => request()->attributes->get('branch_id'),
+            'branch_public_id' => request()->attributes->get('branch_public_id'),
         ]);
     });
 
@@ -255,6 +261,39 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
         Route::delete('/{publicId}', [AdminRestaurantController::class, 'destroy']);
         Route::post('/{publicId}/owners', [AdminRestaurantController::class, 'addOwner']);
         Route::delete('/{publicId}/owners/{userId}', [AdminRestaurantController::class, 'removeOwner']);
+    });
+
+    Route::prefix('admin/branches')->middleware([
+        EnsureRole::class.':super_admin',
+        EnsureMfaSatisfied::class,
+        EnsurePermission::class.':manage_restaurants',
+    ])->group(function (): void {
+        Route::post('/{branch}/suspend', [AdminBranchController::class, 'suspend']);
+        Route::post('/{branch}/unsuspend', [AdminBranchController::class, 'unsuspend']);
+    });
+
+    Route::prefix('businesses')->middleware([
+        EnsureRole::class.':restaurant_owner,restaurant_manager,restaurant_staff,super_admin',
+    ])->group(function (): void {
+        Route::get('/context', [BusinessBranchController::class, 'context']);
+        Route::get('/', [BusinessBranchController::class, 'listBusinesses']);
+        Route::get('/{business}', [BusinessBranchController::class, 'showBusiness']);
+        Route::get('/{business}/branches', [BusinessBranchController::class, 'index']);
+        Route::post('/{business}/branches', [BusinessBranchController::class, 'store']);
+        Route::get('/{business}/branches/{branch}', [BusinessBranchController::class, 'show']);
+        Route::patch('/{business}/branches/{branch}', [BusinessBranchController::class, 'update']);
+        Route::post('/{business}/branches/{branch}/pause', [BusinessBranchController::class, 'pause']);
+        Route::post('/{business}/branches/{branch}/activate', [BusinessBranchController::class, 'activate']);
+        Route::post('/{business}/branches/{branch}/deactivate', [BusinessBranchController::class, 'deactivate']);
+
+        Route::get('/{business}/users', [BusinessBranchController::class, 'businessUsers']);
+        Route::post('/{business}/users', [BusinessBranchController::class, 'storeBusinessUser']);
+        Route::delete('/{business}/users/{userId}', [BusinessBranchController::class, 'destroyBusinessUser']);
+
+        Route::get('/{business}/branches/{branch}/users', [BusinessBranchController::class, 'branchUsers']);
+        Route::post('/{business}/branches/{branch}/users', [BusinessBranchController::class, 'storeBranchUser']);
+        Route::patch('/{business}/branches/{branch}/users/{userId}', [BusinessBranchController::class, 'updateBranchUser']);
+        Route::delete('/{business}/branches/{branch}/users/{userId}', [BusinessBranchController::class, 'destroyBranchUser']);
     });
 
     $restaurantPortal = [

@@ -43,14 +43,14 @@ export default function AdminRestaurantsPage() {
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
-      title="Restaurants"
-      subtitle="Provision restaurants, manage owners, and upload menus"
+      title="Partners"
+      subtitle="Add restaurants, bakeries, butcheries and groceries — each with their own admin dashboard"
       actions={
         <Link href="/admin/restaurants/new">
-          <Button>Add restaurant admin</Button>
+          <Button>Add partner business</Button>
         </Link>
       }
     >
@@ -90,7 +90,7 @@ export default function AdminRestaurantsPage() {
             }}
           >
             <option value="">All</option>
-            <option value="first_party">Suvakamana-owned</option>
+            <option value="first_party">Khana-operated</option>
             <option value="third_party">Partner</option>
           </Select>
         </Field>
@@ -100,15 +100,16 @@ export default function AdminRestaurantsPage() {
         <Skeleton className="h-64 w-full" />
       ) : rows.length === 0 ? (
         <EmptyState
-          title="No restaurants"
-          description="Provision a restaurant after a sales call to create their admin panel."
+          title="No partners yet"
+          description="Add a restaurant, bakery, butchery or grocery to create their admin panel."
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="min-w-full text-sm">
             <thead className="bg-[var(--surface-muted)] text-left">
               <tr>
-                <th className="p-3">Restaurant</th>
+                <th className="p-3">Business</th>
+                <th className="p-3">Type</th>
                 <th className="p-3">Ownership</th>
                 <th className="p-3">Commission</th>
                 <th className="p-3">Staff</th>
@@ -128,8 +129,9 @@ export default function AdminRestaurantsPage() {
                     </Link>
                     <p className="text-xs text-[var(--text-muted)]">{r.slug}</p>
                   </td>
+                  <td className="p-3 capitalize">{r.vendor_type ?? "restaurant"}</td>
                   <td className="p-3">
-                    {r.ownership_type === "first_party" ? "Suvakamana" : "Partner"}
+                    {r.ownership_type === "first_party" ? "Khana-operated" : "Partner"}
                   </td>
                   <td className="p-3">
                     {r.commission_rate != null ? `${r.commission_rate}%` : "—"}

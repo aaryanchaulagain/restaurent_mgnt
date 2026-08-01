@@ -33,7 +33,7 @@ class HealthEndpointTest extends TestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.service', 'suvakamana-api');
         $response->assertJsonPath('data.version', 'v1');
-        $response->assertJsonPath('data.database_driver', 'mysql');
+        $response->assertJsonPath('data.database_driver', config('database.default'));
         $response->assertJsonPath('data.checks.database.ok', true);
         $response->assertJsonPath('data.checks.cache.ok', true);
     }

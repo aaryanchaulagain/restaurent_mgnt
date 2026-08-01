@@ -6,7 +6,7 @@ import { adminNav } from "@/lib/admin-nav";
 export default function AdminAuditLogsPage() {
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Audit logs"

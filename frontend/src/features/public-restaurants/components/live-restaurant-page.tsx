@@ -2,9 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, useToast } from "@/components/ui/navigation";
@@ -27,22 +26,19 @@ function MenuItemRow({
   onOpen: (item: PublicMenuItem) => void;
 }) {
   return (
-    <motion.button
+    <button
       type="button"
       onClick={() => onOpen(item)}
-      initial={{ opacity: 0, y: 10 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -2 }}
-      className="group flex w-full gap-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3 text-left shadow-[var(--shadow-sm)] transition duration-300 hover:border-[rgba(216,102,45,0.35)] hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-burnt-orange)] sm:gap-5 sm:p-4"
+      className="menu-item-card group flex w-full gap-4 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-3 text-left shadow-[var(--shadow-sm)] transition duration-200 hover:-translate-y-0.5 hover:border-[rgba(216,102,45,0.35)] hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-burnt-orange)] sm:gap-5 sm:p-4"
     >
       <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[var(--radius-lg)] sm:h-32 sm:w-36">
         <Image
           src={pickImage(item.image)}
           alt={item.name}
           fill
-          className="object-cover transition duration-500 group-hover:scale-105"
+          loading="lazy"
+          quality={70}
+          className="object-cover transition duration-300 group-hover:scale-105"
           sizes="144px"
         />
         {!item.is_available ? (
@@ -82,7 +78,7 @@ function MenuItemRow({
           </span>
         </div>
       </div>
-    </motion.button>
+    </button>
   );
 }
 
@@ -257,32 +253,23 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
             className="text-white/70 [&_a]:text-white/80 [&_a:hover]:text-white"
           />
 
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="mt-6 font-[family-name:var(--font-display)] text-5xl leading-[1.05] sm:text-6xl md:text-7xl"
+          <p
+            className="hero-fade mt-6 font-[family-name:var(--font-display)] text-5xl leading-[1.05] sm:text-6xl md:text-7xl"
           >
             {r.trading_name}
-          </motion.p>
+          </p>
 
-          <motion.p
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.08 }}
-            className="mt-4 max-w-xl text-base text-white/80 sm:text-lg"
+          <p
+            className="hero-fade hero-fade-delay-1 mt-4 max-w-xl text-base text-white/80 sm:text-lg"
           >
             {r.short_description ||
               cuisineLine ||
               locationLine ||
               "Crafted dishes, ready for pickup or delivery."}
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.16 }}
-            className="mt-8 flex flex-wrap items-center gap-3"
+          <div
+            className="hero-fade hero-fade-delay-2 mt-8 flex flex-wrap items-center gap-3"
           >
             <Button size="lg" onClick={scrollToMenu}>
               Browse menu
@@ -306,7 +293,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                 ~{r.average_preparation_minutes} min
               </span>
             ) : null}
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -341,12 +328,12 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
           </div>
         ) : (
           <>
-            <div className="sticky top-16 z-20 -mx-4 mt-10 border-y border-[var(--border-subtle)] bg-[var(--surface-glass)] px-4 py-4 backdrop-blur-md sm:mx-0 sm:rounded-[var(--radius-xl)] sm:border sm:shadow-[var(--shadow-sm)]">
+            <div className="sticky top-16 z-20 -mx-4 mt-10 border-y border-[var(--border-subtle)] bg-[var(--surface-elevated)]/95 px-4 py-4 sm:mx-0 sm:rounded-[var(--radius-xl)] sm:border sm:shadow-[var(--shadow-sm)] supports-[backdrop-filter]:bg-[var(--surface-elevated)]/85 supports-[backdrop-filter]:backdrop-blur-sm">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   <button
                     type="button"
-                    onClick={() => setActiveCategory("all")}
+                    onClick={() => startTransition(() => setActiveCategory("all"))}
                     className={`shrink-0 rounded-[var(--radius-md)] px-3.5 py-2 text-sm font-medium transition ${
                       activeCategory === "all"
                         ? "bg-[var(--color-charcoal)] text-white"
@@ -359,7 +346,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                     <button
                       key={cat.public_id}
                       type="button"
-                      onClick={() => setActiveCategory(cat.public_id)}
+                      onClick={() => startTransition(() => setActiveCategory(cat.public_id))}
                       className={`shrink-0 rounded-[var(--radius-md)] px-3.5 py-2 text-sm font-medium transition ${
                         activeCategory === cat.public_id
                           ? "bg-[var(--color-charcoal)] text-white"
@@ -372,7 +359,10 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
                 </div>
                 <SearchInput
                   value={menuQuery}
-                  onChange={(e) => setMenuQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    startTransition(() => setMenuQuery(value));
+                  }}
                   placeholder="Search dishes"
                   className="w-full lg:max-w-xs"
                 />
@@ -381,7 +371,7 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
 
             <div className="mt-10 space-y-14 pb-28">
               {sections.map(({ cat, catItems }) => (
-                <section key={cat.public_id} id={cat.public_id}>
+                <section key={cat.public_id} id={cat.public_id} className="menu-section">
                   <div className="mb-5 flex items-end justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-burnt-orange)] uppercase">

@@ -16,6 +16,7 @@ class LoginTest extends TestCase
     {
         parent::setUp();
         Role::query()->create(['slug' => 'customer', 'name' => 'Customer', 'guard' => 'web']);
+        Role::query()->create(['slug' => 'super_admin', 'name' => 'Super Admin', 'guard' => 'web']);
     }
 
     public function test_valid_login(): void
@@ -48,6 +49,63 @@ class LoginTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertGuest();
+    }
+
+    public function test_super_admin_must_use_super_admin_portal(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => 'Password1!',
+            'status' => 'active',
+        ]);
+        $user->roles()->attach(Role::query()->where('slug', 'super_admin')->first());
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'Password1!',
+            'portal' => 'standard',
+        ])->assertUnprocessable()
+            ->assertJsonFragment(['Super administrators must use the super admin login page.']);
+
+        $this->assertGuest();
+    }
+
+    public function test_non_admin_cannot_use_super_admin_portal(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'customer@example.com',
+            'password' => 'Password1!',
+            'status' => 'active',
+        ]);
+        $user->roles()->attach(Role::query()->where('slug', 'customer')->first());
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'customer@example.com',
+            'password' => 'Password1!',
+            'portal' => 'super_admin',
+        ])->assertUnprocessable()
+            ->assertJsonFragment(['This account cannot access the super admin portal.']);
+
+        $this->assertGuest();
+    }
+
+    public function test_super_admin_can_use_super_admin_portal(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => 'Password1!',
+            'status' => 'active',
+        ]);
+        $user->roles()->attach(Role::query()->where('slug', 'super_admin')->first());
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'admin@example.com',
+            'password' => 'Password1!',
+            'portal' => 'super_admin',
+        ])->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_suspended_account_rejected(): void

@@ -14,7 +14,9 @@ class OrderNumberSequence extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            // Keep as plain string (Y-m-d). Do not cast to date/datetime — that
+            // serializes as Y-m-d H:i:s on SQLite and breaks unique lookups.
+            'last_sequence' => 'integer',
         ];
     }
 }

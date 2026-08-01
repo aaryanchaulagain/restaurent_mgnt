@@ -9,7 +9,7 @@ import { formatCents } from "@/lib/utils";
 export default function AdminDashboardPage() {
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Platform dashboard"

@@ -17,6 +17,7 @@ export type Restaurant = {
   address: string;
   commissionRate: number;
   isPlatformRestaurant?: boolean;
+  isFeaturedPartner?: boolean;
 };
 
 export type MenuItem = {

@@ -41,7 +41,8 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ orderN
       return null;
     },
     enabled: Boolean(user) || Boolean(guestToken),
-    refetchInterval: 8000,
+    refetchInterval: 12_000,
+    refetchIntervalInBackground: false,
   });
 
   const o = orderQuery.data;

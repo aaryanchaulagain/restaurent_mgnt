@@ -48,7 +48,7 @@ export default function AdminPaymentsPage() {
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Payments"

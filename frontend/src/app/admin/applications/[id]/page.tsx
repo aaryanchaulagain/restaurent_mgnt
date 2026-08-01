@@ -40,7 +40,7 @@ export default function AdminApplicationDetailPage({
   if (isLoading || !app) {
     return (
       <AdminShell
-        brand="Suvakamana"
+        brand="Khana"
         portalLabel="Super Admin"
         items={adminNav}
         title="Application"
@@ -212,7 +212,7 @@ function AdminApplicationDetailContent({
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title={displayApplicationName(application)}

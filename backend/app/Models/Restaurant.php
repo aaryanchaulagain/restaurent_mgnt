@@ -51,6 +51,10 @@ class Restaurant extends Model
         'suspended_at',
         'suspension_reason',
         'ownership_type',
+        'is_platform_restaurant',
+        'vendor_type',
+        'business_id',
+        'branch_id',
     ];
 
     protected function casts(): array
@@ -66,6 +70,7 @@ class Restaurant extends Model
             'third_party_delivery_enabled' => 'boolean',
             'dine_in_enabled' => 'boolean',
             'accepting_orders' => 'boolean',
+            'is_platform_restaurant' => 'boolean',
             'logo_urls' => 'array',
             'cover_urls' => 'array',
         ];
@@ -160,6 +165,16 @@ class Restaurant extends Model
     public function paymentAccount(): HasOne
     {
         return $this->hasOne(RestaurantPaymentAccount::class);
+    }
+
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function isPubliclyListed(): bool

@@ -12,7 +12,7 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Platform settings"

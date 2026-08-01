@@ -21,6 +21,7 @@ use App\Notifications\Partner\CommissionOfferNotification;
 use App\Notifications\Partner\OwnerAccessActivatedNotification;
 use App\Notifications\Partner\ReviewStartedNotification;
 use App\Services\Auth\AuditLogger;
+use App\Services\Business\BusinessHierarchyMigrator;
 use App\Support\Abn;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class RestaurantApplicationService
 {
     public function __construct(
         private readonly AuditLogger $auditLogger,
+        private readonly BusinessHierarchyMigrator $businessHierarchyMigrator,
     ) {}
 
     public function createDraft(User $applicant, Request $request): RestaurantApplication
@@ -357,6 +359,8 @@ class RestaurantApplicationService
 
             $locked->addresses()->update(['restaurant_id' => $restaurant->id]);
             $locked->documents()->update(['restaurant_id' => $restaurant->id]);
+
+            $this->businessHierarchyMigrator->migrateRestaurant($restaurant->fresh());
 
             $locked->status = ApplicationStatus::Approved;
             $locked->restaurant_id = $restaurant->id;

@@ -123,7 +123,7 @@ export function SuvakamanaMenuSection() {
     return (
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h2 className="text-3xl text-[var(--text-primary)]">Order from Suvakamana</h2>
-        <p className="mt-3 text-[var(--text-secondary)]">Could not load menu. Please try again.</p>
+        <p className="mt-3 text-[var(--text-secondary)]">Could not load partner menu. Please try again.</p>
         <Button className="mt-4" variant="outline" onClick={() => refetch()}>Retry</Button>
       </section>
     );
@@ -137,11 +137,11 @@ export function SuvakamanaMenuSection() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div>
           <p className="text-xs font-semibold tracking-[0.18em] text-[var(--color-burnt-orange)] uppercase">
-            Order directly from Suvakamana
+            Featured Khana partner
           </p>
           <h2 className="mt-2 text-3xl text-[var(--text-primary)]">{restaurant.trading_name}</h2>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge tone="accent">Official Suvakamana Restaurant</Badge>
+            <Badge tone="accent">Suvakamana · Khana partner</Badge>
             <Badge tone={isOpen ? "success" : "error"}>{isOpen ? "Open now" : "Currently closed"}</Badge>
             {restaurant.pickup_enabled ? <Badge tone="info">Pickup</Badge> : null}
             {restaurant.restaurant_delivery_enabled ? <Badge tone="info">Delivery</Badge> : null}

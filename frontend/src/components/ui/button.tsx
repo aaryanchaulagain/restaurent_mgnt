@@ -38,6 +38,8 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     loading?: boolean;
   };
 
+export { buttonVariants };
+
 export function Button({
   className,
   variant,

@@ -72,6 +72,7 @@ export function CheckoutPageClient() {
   const [quote, setQuote] = useState<QuoteResult | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -109,20 +110,79 @@ export function CheckoutPageClient() {
     };
   }, [fulfilment, selectedAddress, addressId, line1, suburb, state, postcode, deliveryInstructions]);
 
-  const canRequestQuote =
-    cart &&
-    pricing?.minimum_order_met &&
-    termsAccepted &&
-    name.trim() &&
-    email.trim() &&
-    phone.trim() &&
-    fulfilment !== "third_party_delivery" &&
-    (fulfilment === "pickup" ||
-      (fulfilment === "restaurant_delivery" &&
-        (selectedAddress || (line1 && suburb && state && postcode))));
+  const blockers = useMemo(() => {
+    const list: { id: string; message: string; focusId?: string }[] = [];
+
+    if (!name.trim()) {
+      list.push({ id: "name", message: "Enter your full name.", focusId: "name" });
+    }
+    if (!email.trim()) {
+      list.push({ id: "email", message: "Enter your email address.", focusId: "email" });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      list.push({ id: "email", message: "Enter a valid email address.", focusId: "email" });
+    }
+    if (!phone.trim()) {
+      list.push({ id: "phone", message: "Enter a contact phone number.", focusId: "phone" });
+    }
+    if (fulfilment === "third_party_delivery") {
+      list.push({
+        id: "fulfilment",
+        message: "Third-party delivery is not available yet — choose pickup or restaurant delivery.",
+      });
+    }
+    if (
+      fulfilment === "restaurant_delivery" &&
+      !(selectedAddress && addressId !== "new") &&
+      !(line1.trim() && suburb.trim() && state.trim() && postcode.trim())
+    ) {
+      list.push({
+        id: "address",
+        message: "Complete the delivery address (street, suburb, state and postcode).",
+        focusId: "line1",
+      });
+    }
+    if (!termsAccepted) {
+      list.push({ id: "terms", message: "Accept the terms and refund policy.", focusId: "terms" });
+    }
+    if (pricing && !pricing.minimum_order_met) {
+      list.push({
+        id: "minimum",
+        message: `Minimum order of ${formatCents(pricing.minimum_order_cents)} is not met yet.`,
+      });
+    }
+
+    return list;
+  }, [
+    name,
+    email,
+    phone,
+    fulfilment,
+    selectedAddress,
+    addressId,
+    line1,
+    suburb,
+    state,
+    postcode,
+    termsAccepted,
+    pricing,
+  ]);
+
+  const canRequestQuote = Boolean(cart) && blockers.length === 0;
+
+  const fieldError = (id: string) =>
+    attempted ? blockers.find((b) => b.id === id)?.message : undefined;
 
   const requestQuote = async () => {
-    if (!canRequestQuote) return;
+    if (blockers.length > 0) {
+      setAttempted(true);
+      const target = blockers.find((b) => b.focusId)?.focusId;
+      if (target) {
+        const el = document.getElementById(target);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        el?.focus({ preventScroll: true });
+      }
+      return;
+    }
     setQuoteLoading(true);
     setQuoteError(null);
     try {
@@ -195,13 +255,13 @@ export function CheckoutPageClient() {
           <section className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-sm)]">
             <h2 className="text-2xl">Customer information</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Full name" htmlFor="name">
+              <Field label="Full name" htmlFor="name" error={fieldError("name")}>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Nguyen" />
               </Field>
-              <Field label="Phone" htmlFor="phone">
+              <Field label="Phone" htmlFor="phone" error={fieldError("phone")}>
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 400 000 000" />
               </Field>
-              <Field label="Email" htmlFor="email" className="sm:col-span-2">
+              <Field label="Email" htmlFor="email" className="sm:col-span-2" error={fieldError("email")}>
                 <Input
                   id="email"
                   type="email"
@@ -265,7 +325,7 @@ export function CheckoutPageClient() {
                 ) : null}
                 {(!isAuthenticated || addressId === "new" || addresses.length === 0) && (
                   <>
-                    <Field label="Address line 1" htmlFor="line1">
+                    <Field label="Address line 1" htmlFor="line1" error={fieldError("address")}>
                       <Input id="line1" value={line1} onChange={(e) => setLine1(e.target.value)} />
                     </Field>
                     <div className="grid gap-4 sm:grid-cols-3">
@@ -311,11 +371,17 @@ export function CheckoutPageClient() {
               <Textarea id="order-notes" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} />
             </Field>
             <Checkbox
+              id="terms"
               className="mt-4"
               label="I agree to the terms, refund policy and restaurant partner conditions"
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
             />
+            {fieldError("terms") ? (
+              <p className="mt-2 text-xs text-[var(--color-error)]" role="alert">
+                {fieldError("terms")}
+              </p>
+            ) : null}
           </section>
 
           {isDev ? (
@@ -376,11 +442,25 @@ export function CheckoutPageClient() {
           <Button
             className="mt-6 w-full"
             size="lg"
-            disabled={!canRequestQuote || quoteLoading}
+            loading={quoteLoading}
             onClick={() => void requestQuote()}
           >
             {quoteLoading ? "Preparing quote…" : quote ? "Refresh checkout quote" : "Prepare checkout quote"}
           </Button>
+
+          {blockers.length > 0 ? (
+            <div
+              className="mt-3 rounded-[var(--radius-md)] border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900"
+              role={attempted ? "alert" : undefined}
+            >
+              <p className="font-medium">Before you can continue to payment:</p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                {blockers.map((b) => (
+                  <li key={b.id}>{b.message}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {quote ? (
             <PlaceOrderButton
               className="mt-4"

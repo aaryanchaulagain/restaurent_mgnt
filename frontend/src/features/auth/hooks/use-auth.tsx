@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { ApiError } from "@/lib/api/client";
-import { authApi } from "../api/auth-api";
+import { authApi, type LoginPortal } from "../api/auth-api";
 import type { LoginInput, RegisterInput } from "../schemas";
 import type { AuthStatus, AuthUser } from "../types";
 import { hasPermission, hasRole, isAccountBlocked } from "../utils/roles";
@@ -21,7 +21,10 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
   refresh: () => Promise<AuthUser | null>;
-  login: (input: LoginInput) => Promise<{ mfaRequired: boolean; user: AuthUser | null }>;
+  login: (
+    input: LoginInput,
+    portal?: LoginPortal,
+  ) => Promise<{ mfaRequired: boolean; user: AuthUser | null }>;
   register: (input: RegisterInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
@@ -74,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const login = useCallback(async (input: LoginInput) => {
-    const res = await authApi.login(input);
+  const login = useCallback(async (input: LoginInput, portal: LoginPortal = "standard") => {
+    const res = await authApi.login(input, portal);
     if (res.data.mfa_required) {
       return { mfaRequired: true, user: null };
     }

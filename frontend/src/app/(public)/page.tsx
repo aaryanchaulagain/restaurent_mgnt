@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/forms";
 import {
@@ -24,46 +23,28 @@ export default function HomePage() {
     <main>
       <section className="relative isolate min-h-[88vh] overflow-hidden text-white">
         <Image
-          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=2000&q=80"
+          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1600&q=75"
           alt="Candlelit restaurant table with plated seasonal dishes"
           fill
           priority
+          quality={75}
           className="object-cover"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/25" />
         <div className="texture-grain absolute inset-0" />
         <div className="relative mx-auto flex min-h-[88vh] max-w-6xl flex-col justify-center px-4 py-20 sm:px-6">
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl"
-          >
-            Suvakamana
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.08 }}
-            className="mt-6 max-w-3xl text-[var(--text-hero)] leading-[1.08] text-white"
-          >
-            Exceptional food, delivered from restaurants you love.
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.16 }}
-            className="mt-5 max-w-xl text-lg text-white/80"
-          >
-            Discover local flavours, premium restaurants and exclusive offers in
-            one beautifully simple experience.
-          </motion.p>
-          <motion.form
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.24 }}
-            className="mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row"
+          <p className="hero-fade font-[family-name:var(--font-display)] text-4xl sm:text-5xl">
+            Khana
+          </p>
+          <h1 className="hero-fade hero-fade-delay-1 mt-6 max-w-3xl text-[var(--text-hero)] leading-[1.08] text-white">
+            Restaurants, bakeries, butcheries &amp; groceries — one marketplace.
+          </h1>
+          <p className="hero-fade hero-fade-delay-2 mt-5 max-w-xl text-lg text-white/80">
+            Order from local partners on Khana, including Suvakamana Restaurant and many more.
+          </p>
+          <form
+            className="hero-fade hero-fade-delay-3 mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row"
             action="/restaurants"
           >
             <SearchInput
@@ -73,9 +54,9 @@ export default function HomePage() {
               aria-label="Search by location"
             />
             <Button type="submit" size="lg" className="sm:w-auto">
-              Search Restaurants
+              Browse partners
             </Button>
-          </motion.form>
+          </form>
         </div>
       </section>
 
@@ -133,23 +114,23 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="rounded-[var(--radius-xl)] bg-[var(--color-warm-black)] px-6 py-12 text-white sm:px-10">
-          <h2 className="text-3xl sm:text-4xl">How Suvakamana works</h2>
+          <h2 className="text-3xl sm:text-4xl">How Khana works</h2>
           <ol className="mt-8 grid gap-6 md:grid-cols-3">
             {[
               {
                 step: "01",
-                title: "Choose a restaurant",
-                body: "Browse independent kitchens curated for flavour and reliability.",
+                title: "Choose a partner",
+                body: "Browse restaurants, bakeries, butcheries and groceries on Khana.",
               },
               {
                 step: "02",
                 title: "Build your order",
-                body: "Select dishes, modifiers and delivery or pickup in one cart.",
+                body: "Select items, modifiers and delivery or pickup in one cart.",
               },
               {
                 step: "03",
                 title: "Track and enjoy",
-                body: "Follow preparation live and receive food when it is at its best.",
+                body: "Follow preparation live and receive your order when it is ready.",
               },
             ].map((item) => (
               <li key={item.step}>

@@ -4,7 +4,7 @@ import { orderErrorMessage } from "@/features/orders/utils/order-errors";
 
 describe("admin order helpers", () => {
   it("maps ownership to friendly labels", () => {
-    expect(ownershipLabel("first_party")).toBe("Suvakamana-owned");
+    expect(ownershipLabel("first_party")).toBe("Khana-operated");
     expect(ownershipLabel("third_party")).toBe("Partner restaurant");
   });
 });

@@ -25,7 +25,9 @@ class SuvakamanaRestaurantSeeder extends Seeder
             'public_id' => (string) Str::uuid(),
             'legal_business_name' => $name,
             'trading_name' => $name,
-            'ownership_type' => 'first_party',
+            'ownership_type' => 'third_party',
+            'is_platform_restaurant' => true,
+            'vendor_type' => 'restaurant',
             'status' => RestaurantStatus::Active,
             'verification_status' => 'verified',
             'accepting_orders' => true,
@@ -40,7 +42,9 @@ class SuvakamanaRestaurantSeeder extends Seeder
         ]);
 
         $restaurant->update([
-            'ownership_type' => 'first_party',
+            'ownership_type' => 'third_party',
+            'is_platform_restaurant' => true,
+            'vendor_type' => 'restaurant',
             'cover_urls' => $this->imageSet(
                 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80'
             ),

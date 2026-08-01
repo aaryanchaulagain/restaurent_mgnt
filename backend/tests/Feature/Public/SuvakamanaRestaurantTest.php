@@ -25,6 +25,7 @@ class SuvakamanaRestaurantTest extends TestCase
             'legal_business_name' => 'Suvakamana Restaurant',
             'trading_name' => 'Suvakamana Restaurant',
             'ownership_type' => 'first_party',
+            'is_platform_restaurant' => true,
             'status' => RestaurantStatus::Active,
             'accepting_orders' => true,
             'published_at' => now(),
@@ -33,6 +34,9 @@ class SuvakamanaRestaurantTest extends TestCase
             'pickup_enabled' => true,
             'restaurant_delivery_enabled' => true,
         ]);
+        if (! $restaurant->is_platform_restaurant) {
+            $restaurant->forceFill(['is_platform_restaurant' => true])->save();
+        }
         for ($d = 0; $d < 7; $d++) {
             RestaurantOpeningHour::query()->firstOrCreate(
                 ['restaurant_id' => $restaurant->id, 'day_of_week' => $d, 'service_type' => 'all', 'is_closed' => false],

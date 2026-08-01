@@ -45,7 +45,7 @@ export default function AdminPaymentDetailPage({ params }: { params: Promise<{ p
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Payment detail"

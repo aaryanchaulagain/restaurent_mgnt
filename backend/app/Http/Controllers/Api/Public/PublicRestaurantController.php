@@ -15,6 +15,7 @@ use App\Models\RestaurantOpeningHour;
 use App\Services\Media\PublicImageService;
 use App\Services\Restaurant\RestaurantOpenStatusService;
 use App\Support\ApiResponse;
+use App\Support\VendorTypes;
 use Illuminate\Http\Request;
 
 class PublicRestaurantController extends Controller
@@ -48,6 +49,12 @@ class PublicRestaurantController extends Controller
             $ownership = (string) $request->string('ownership_type');
             if (in_array($ownership, ['first_party', 'third_party'], true)) {
                 $query->where('ownership_type', $ownership);
+            }
+        }
+        if ($request->filled('vendor_type')) {
+            $vendorType = (string) $request->string('vendor_type');
+            if (in_array($vendorType, VendorTypes::all(), true)) {
+                $query->where('vendor_type', $vendorType);
             }
         }
         if ($request->boolean('pickup')) {
@@ -113,7 +120,6 @@ class PublicRestaurantController extends Controller
 
         $restaurant = Restaurant::query()
             ->where('slug', $slug)
-            ->where('ownership_type', 'first_party')
             ->where('status', RestaurantStatus::Active)
             ->whereNotNull('published_at')
             ->whereNull('suspended_at')
@@ -121,7 +127,7 @@ class PublicRestaurantController extends Controller
             ->first();
 
         if (! $restaurant) {
-            return ApiResponse::error('Platform restaurant not found.', 404);
+            return ApiResponse::error('Featured partner not found.', 404);
         }
 
         $items = MenuItem::query()

@@ -30,7 +30,7 @@ export default function AdminApplicationsPage() {
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Restaurant applications"

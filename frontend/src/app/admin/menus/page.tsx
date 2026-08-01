@@ -8,6 +8,7 @@ import { Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/forms";
 import { adminNav } from "@/lib/admin-nav";
+import { vendorTypeLabel } from "@/lib/brand";
 import { adminRestaurantApi } from "@/features/admin/api/admin-restaurant-api";
 import { openRestaurantMenuEditor } from "@/features/admin/lib/open-restaurant-menu";
 
@@ -33,47 +34,50 @@ export default function AdminMenusPage() {
       ["active", "pending_setup", "temporarily_closed"].includes(r.status),
     );
     return [...all].sort((a, b) => {
-      if (a.ownership_type === "first_party" && b.ownership_type !== "first_party") return -1;
-      if (b.ownership_type === "first_party" && a.ownership_type !== "first_party") return 1;
+      const aFeatured = a.slug === "suvakamana-restaurant" ? 0 : 1;
+      const bFeatured = b.slug === "suvakamana-restaurant" ? 0 : 1;
+      if (aFeatured !== bFeatured) return aFeatured - bFeatured;
       return a.trading_name.localeCompare(b.trading_name);
     });
   }, [list.data?.restaurants]);
 
-  const platform = rows.find((r) => r.ownership_type === "first_party");
+  const featuredPartner = rows.find((r) => r.slug === "suvakamana-restaurant") ?? rows[0];
 
   return (
     <AdminShell
-      brand="Suvakamana"
+      brand="Khana"
       portalLabel="Super Admin"
       items={adminNav}
       title="Menus"
-      subtitle="Add menu items for the main Suvakamana website and partner restaurants"
+      subtitle="Manage menus for Khana partners (restaurants, bakeries, butcheries, groceries)"
     >
-      {platform ? (
+      {featuredPartner ? (
         <section className="mb-6 rounded-lg border-2 border-[var(--color-burnt-orange)] bg-[rgba(216,102,45,0.06)] p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <Badge tone="accent">Main website</Badge>
-              <h2 className="mt-2 text-2xl font-medium">{platform.trading_name}</h2>
+              <Badge tone="accent">Featured partner</Badge>
+              <h2 className="mt-2 text-2xl font-medium">{featuredPartner.trading_name}</h2>
               <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                Items added here appear on the homepage and at /restaurants/{platform.slug}
+                Items added here appear on the homepage and at /restaurants/{featuredPartner.slug}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => openRestaurantMenuEditor(platform.public_id, "/restaurant/menu")}
+                onClick={() =>
+                  openRestaurantMenuEditor(featuredPartner.public_id, "/restaurant/menu")
+                }
               >
                 Manage menus
               </Button>
               <Button
                 variant="outline"
                 onClick={() =>
-                  openRestaurantMenuEditor(platform.public_id, "/restaurant/menu/create")
+                  openRestaurantMenuEditor(featuredPartner.public_id, "/restaurant/menu/create")
                 }
               >
-                Add item to Suvakamana
+                Add menu item
               </Button>
-              <Link href={`/restaurants/${platform.slug}`} target="_blank">
+              <Link href={`/restaurants/${featuredPartner.slug}`} target="_blank">
                 <Button variant="ghost">View on site</Button>
               </Link>
             </div>
@@ -82,17 +86,13 @@ export default function AdminMenusPage() {
       ) : null}
 
       <div className="mb-6 grid gap-4 rounded-lg border bg-white p-4 sm:grid-cols-2">
-        <Field label="Search restaurants">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Name or slug"
-          />
+        <Field label="Search partners">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or slug" />
         </Field>
         <Field label="Ownership">
           <Select value={ownership} onChange={(e) => setOwnership(e.target.value)}>
-            <option value="">All restaurants</option>
-            <option value="first_party">Suvakamana-owned (main site)</option>
+            <option value="">All partners</option>
+            <option value="first_party">Khana-operated</option>
             <option value="third_party">Partner</option>
           </Select>
         </Field>
@@ -102,11 +102,11 @@ export default function AdminMenusPage() {
         <Skeleton className="h-64 w-full" />
       ) : rows.length === 0 ? (
         <EmptyState
-          title="No restaurants"
-          description="Provision a restaurant first, then manage its menu here."
+          title="No partners"
+          description="Add a partner business first, then manage its menu here."
           action={
             <Link href="/admin/restaurants/new">
-              <Button>Add restaurant</Button>
+              <Button>Add partner business</Button>
             </Link>
           }
         />
@@ -115,7 +115,8 @@ export default function AdminMenusPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-[var(--surface-muted)] text-left">
               <tr>
-                <th className="p-3">Restaurant</th>
+                <th className="p-3">Business</th>
+                <th className="p-3">Type</th>
                 <th className="p-3">Ownership</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Menus</th>
@@ -128,9 +129,10 @@ export default function AdminMenusPage() {
                     <p className="font-medium">{r.trading_name}</p>
                     <p className="text-xs text-[var(--text-muted)]">{r.slug}</p>
                   </td>
+                  <td className="p-3">{vendorTypeLabel(r.vendor_type)}</td>
                   <td className="p-3">
                     {r.ownership_type === "first_party" ? (
-                      <Badge tone="accent">Suvakamana-owned</Badge>
+                      <Badge tone="accent">Khana-operated</Badge>
                     ) : (
                       <Badge tone="neutral">Partner</Badge>
                     )}
@@ -159,15 +161,9 @@ export default function AdminMenusPage() {
                         </Button>
                       </Link>
                     </div>
-                    {r.ownership_type === "first_party" ? (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Shows on homepage “Order from Suvakamana”
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        Public page: /restaurants/{r.slug}
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      Public page: /restaurants/{r.slug}
+                    </p>
                   </td>
                 </tr>
               ))}

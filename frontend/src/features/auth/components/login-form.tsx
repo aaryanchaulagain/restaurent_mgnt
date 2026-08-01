@@ -7,11 +7,12 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input } from "@/components/ui/forms";
 import { ApiError } from "@/lib/api/client";
+import type { LoginPortal } from "../api/auth-api";
 import { useAuth } from "../hooks/use-auth";
 import { loginSchema } from "../schemas";
 import { defaultRedirectForUser, intendedFromSearch, safeRedirectPath } from "../utils/redirects";
 
-export function LoginForm() {
+export function LoginForm({ portal = "standard" }: { portal?: LoginPortal }) {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,7 +42,7 @@ export function LoginForm() {
 
     setLoading(true);
     try {
-      const result = await login(parsed.data);
+      const result = await login(parsed.data, portal);
       if (result.mfaRequired) {
         router.push("/mfa/challenge");
         return;
@@ -145,7 +146,7 @@ export function LoginForm() {
       ) : null}
 
       <Button type="submit" className="w-full" loading={loading}>
-        Sign in
+        {portal === "super_admin" ? "Sign in to super admin" : "Sign in"}
       </Button>
     </form>
   );

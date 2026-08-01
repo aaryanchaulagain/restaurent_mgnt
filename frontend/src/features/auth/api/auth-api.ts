@@ -17,6 +17,7 @@ type MfaSetupPayload = {
   otpauth_url: string;
 };
 type RecoveryPayload = { recovery_codes: string[] };
+export type LoginPortal = "standard" | "super_admin";
 
 export const authApi = {
   register(input: RegisterInput) {
@@ -34,13 +35,14 @@ export const authApi = {
     });
   },
 
-  login(input: LoginInput) {
+  login(input: LoginInput, portal: LoginPortal = "standard") {
     return apiRequest<LoginPayload>("/api/auth/login", {
       method: "POST",
       body: {
         email: input.email,
         password: input.password,
         remember: Boolean(input.remember),
+        portal,
       },
     });
   },

@@ -7,14 +7,6 @@ vi.mock("./cart-provider", () => ({
   useCart: () => mockUseCart(),
 }));
 
-vi.mock("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
-  motion: {
-    button: ({ children, ...props }: Record<string, unknown>) => <button {...props}>{children as React.ReactNode}</button>,
-    div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children as React.ReactNode}</div>,
-  },
-}));
-
 describe("CartConflictModal", () => {
   const clearConflict = vi.fn();
   const confirmReplaceRestaurant = vi.fn().mockResolvedValue(undefined);

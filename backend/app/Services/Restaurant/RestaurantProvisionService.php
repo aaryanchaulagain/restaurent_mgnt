@@ -9,6 +9,8 @@ use App\Models\RestaurantCommissionAgreement;
 use App\Models\RestaurantUser;
 use App\Models\User;
 use App\Services\Auth\AuditLogger;
+use App\Services\Business\BusinessHierarchyMigrator;
+use App\Support\VendorTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -20,6 +22,7 @@ class RestaurantProvisionService
     public function __construct(
         private readonly RestaurantMembershipService $membership,
         private readonly AuditLogger $auditLogger,
+        private readonly BusinessHierarchyMigrator $businessHierarchyMigrator,
     ) {}
 
     /**
@@ -74,7 +77,12 @@ class RestaurantProvisionService
                 $ownershipType = 'third_party';
             }
 
-            $slug = $this->uniqueSlug(Str::slug($data['trading_name'] ?: $data['legal_business_name'] ?: 'restaurant'));
+            $vendorType = $data['vendor_type'] ?? VendorTypes::RESTAURANT;
+            if (! in_array($vendorType, VendorTypes::all(), true)) {
+                $vendorType = VendorTypes::RESTAURANT;
+            }
+
+            $slug = $this->uniqueSlug(Str::slug($data['trading_name'] ?: $data['legal_business_name'] ?: $vendorType));
 
             $restaurant = Restaurant::query()->create([
                 'public_id' => (string) Str::uuid(),
@@ -89,6 +97,7 @@ class RestaurantProvisionService
                 'timezone' => config('partner.default_timezone'),
                 'currency' => config('partner.default_currency'),
                 'ownership_type' => $ownershipType,
+                'vendor_type' => $vendorType,
                 'approved_at' => now(),
                 'approved_by' => $admin->id,
                 'published_at' => $activateNow ? now() : null,
@@ -113,6 +122,8 @@ class RestaurantProvisionService
                 'terms_version' => config('partner.terms_version'),
             ]);
 
+            $hierarchy = $this->businessHierarchyMigrator->migrateRestaurant($restaurant->fresh());
+
             $this->auditLogger->log(
                 'admin.restaurant_provisioned',
                 $admin,
@@ -122,14 +133,18 @@ class RestaurantProvisionService
                     'owner_user_id' => $owner->id,
                     'activate_now' => $activateNow,
                     'ownership_type' => $ownershipType,
+                    'business_id' => $hierarchy['business']->id,
+                    'branch_id' => $hierarchy['branch']->id,
                 ],
                 request: $request,
             );
 
             return [
-                'restaurant' => $restaurant->fresh(['commissionAgreements', 'restaurantUsers.user', 'restaurantUsers.role']),
+                'restaurant' => $restaurant->fresh(['commissionAgreements', 'restaurantUsers.user', 'restaurantUsers.role', 'business', 'branch']),
                 'owner' => $owner->fresh(),
                 'temporary_password' => $existing ? null : $temporaryPassword,
+                'business' => $hierarchy['business'],
+                'branch' => $hierarchy['branch'],
             ];
         });
     }

@@ -50,6 +50,7 @@ class AuthController extends Controller
             $request->string('email')->toString(),
             $request->string('password')->toString(),
             $request->boolean('remember'),
+            $request->string('portal', 'standard')->toString(),
             $request,
         );
 

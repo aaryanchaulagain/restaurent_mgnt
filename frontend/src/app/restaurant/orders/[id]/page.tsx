@@ -23,7 +23,8 @@ export default function RestaurantOrderDetailPage({ params }: { params: Promise<
   const order = useQuery({
     queryKey: ["restaurant-order", id],
     queryFn: async () => (await restaurantOrderApi.get(id)).data.order,
-    refetchInterval: 8000,
+    refetchInterval: 12_000,
+    refetchIntervalInBackground: false,
   });
 
   const acceptMut = useMutation({
