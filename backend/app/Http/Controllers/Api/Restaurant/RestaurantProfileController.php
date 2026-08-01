@@ -28,7 +28,7 @@ class RestaurantProfileController extends Controller
 
     public function show(Request $request)
     {
-        $restaurant = RestaurantContext::restaurant($request)->load('cuisines');
+        $restaurant = RestaurantContext::restaurant($request)->load(['cuisines', 'business']);
 
         return ApiResponse::success([
             'profile' => new RestaurantProfileResource($restaurant),
@@ -109,7 +109,7 @@ class RestaurantProfileController extends Controller
         });
 
         return ApiResponse::success([
-            'profile' => new RestaurantProfileResource($restaurant->fresh()->load('cuisines')),
+            'profile' => new RestaurantProfileResource($restaurant->fresh()->load(['cuisines', 'business'])),
         ]);
     }
 

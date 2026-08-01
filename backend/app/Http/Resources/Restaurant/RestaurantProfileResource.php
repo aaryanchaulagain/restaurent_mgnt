@@ -4,6 +4,7 @@ namespace App\Http\Resources\Restaurant;
 
 use App\Models\Restaurant;
 use App\Models\RestaurantAddress;
+use App\Support\BusinessTypes;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,11 +18,24 @@ class RestaurantProfileResource extends JsonResource
             ->where('is_primary', true)
             ->first();
 
+        $businessType = $this->relationLoaded('business')
+            ? $this->business?->business_type
+            : $this->business()->value('business_type');
+
+        $normalizedType = BusinessTypes::forRestaurant(
+            is_string($businessType) ? $businessType : null,
+            is_string($this->vendor_type) ? $this->vendor_type : null,
+        );
+
         return [
             'public_id' => $this->public_id,
             'slug' => $this->slug,
             'legal_business_name' => $this->legal_business_name,
             'trading_name' => $this->trading_name,
+            // Authoritative vertical for catalogue presentation (normalized).
+            'business_type' => $normalizedType,
+            'vendor_type' => $this->vendor_type ?: null,
+            'catalogue' => BusinessTypes::catalogueConfig($normalizedType),
             'short_description' => $this->short_description,
             'description' => $this->description,
             'business_email' => $this->business_email,

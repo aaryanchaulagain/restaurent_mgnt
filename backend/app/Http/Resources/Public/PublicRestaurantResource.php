@@ -6,6 +6,7 @@ use App\Models\Restaurant;
 use App\Models\RestaurantAddress;
 use App\Models\RestaurantMedia;
 use App\Services\Media\PublicImageService;
+use App\Support\BusinessTypes;
 use App\Support\PublicImageUrls;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -64,6 +65,13 @@ class PublicRestaurantResource extends JsonResource
             'is_platform_restaurant' => (bool) $this->is_platform_restaurant,
             'is_featured_partner' => $this->slug === config('suvakamana.platform_restaurant_slug', 'suvakamana-restaurant'),
             'vendor_type' => $this->vendor_type ?: 'restaurant',
+            // Presentation-only vertical (normalized); does not rewrite stored vendor_type.
+            'business_type' => BusinessTypes::forRestaurant(
+                $this->relationLoaded('business')
+                    ? ($this->business?->business_type)
+                    : $this->business()->value('business_type'),
+                $this->vendor_type,
+            ),
             'is_open' => $this->openNow,
             'today_hours' => $this->todayHours,
             'next_opening_time' => $this->nextOpening,
