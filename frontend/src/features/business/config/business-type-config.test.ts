@@ -33,4 +33,11 @@ describe("business-type-config", () => {
     expect(getBusinessTypeConfig("butcher").supportsTypeDetails).toBe(true);
     expect(getBusinessTypeConfig("restaurant").supportsTypeDetails).toBe(false);
   });
+
+  it("sets inventory modes by vertical", () => {
+    expect(getBusinessTypeConfig("grocery").inventoryMode).toBe("counted");
+    expect(getBusinessTypeConfig("butcher").inventoryMode).toBe("counted");
+    expect(getBusinessTypeConfig("bakery").inventoryMode).toBe("counted");
+    expect(getBusinessTypeConfig("restaurant").inventoryMode).toBe("boolean");
+  });
 });

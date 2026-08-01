@@ -540,34 +540,87 @@ class RestaurantMenuController extends Controller
         $item = MenuItem::query()->where('restaurant_id', $restaurantId)->where('public_id', $publicId)->firstOrFail();
         $data = $request->validate([
             'variants' => ['required', 'array'],
+            'variants.*.public_id' => ['sometimes', 'nullable', 'uuid'],
             'variants.*.name' => ['required', 'string', 'max:255'],
             'variants.*.price_cents' => ['required', 'integer', 'min:0'],
             'variants.*.is_default' => ['sometimes', 'boolean'],
             'variants.*.sku' => ['nullable', 'string', 'max:64'],
+            'variants.*.is_available' => ['sometimes', 'boolean'],
+            'variants.*.is_active' => ['sometimes', 'boolean'],
         ]);
         $defaults = collect($data['variants'])->where('is_default', true)->count();
         if ($defaults > 1) {
             throw ValidationException::withMessages(['variants' => ['Only one default variant is allowed.']]);
         }
-        DB::transaction(function () use ($item, $data, $restaurantId, $request) {
-            MenuItemVariant::query()->where('menu_item_id', $item->id)->delete();
+        DB::transaction(function () use ($item, $data, $restaurantId) {
+            $existing = MenuItemVariant::query()
+                ->where('menu_item_id', $item->id)
+                ->get()
+                ->keyBy('public_id');
+            $keptIds = [];
             $hasDefault = false;
             foreach ($data['variants'] as $index => $row) {
                 $isDefault = ! empty($row['is_default']) && ! $hasDefault;
                 if ($isDefault) {
                     $hasDefault = true;
                 }
-                MenuItemVariant::query()->create([
-                    'public_id' => (string) Str::uuid(),
-                    'restaurant_id' => $restaurantId,
-                    'menu_item_id' => $item->id,
+                $payload = [
                     'name' => $row['name'],
                     'sku' => $row['sku'] ?? null,
                     'price_cents' => $row['price_cents'],
                     'is_default' => $isDefault,
                     'sort_order' => $index,
+                ];
+                if (array_key_exists('is_available', $row)) {
+                    $payload['is_available'] = (bool) $row['is_available'];
+                }
+                if (array_key_exists('is_active', $row)) {
+                    $payload['is_active'] = (bool) $row['is_active'];
+                }
+
+                $incomingId = $row['public_id'] ?? null;
+                if (is_string($incomingId) && $incomingId !== '' && $existing->has($incomingId)) {
+                    $variant = $existing->get($incomingId);
+                    $variant->update($payload);
+                    $keptIds[] = $variant->id;
+                    continue;
+                }
+
+                if (is_string($incomingId) && $incomingId !== '') {
+                    $foreign = MenuItemVariant::withTrashed()
+                        ->where('public_id', $incomingId)
+                        ->first();
+                    if ($foreign && (int) $foreign->menu_item_id !== (int) $item->id) {
+                        throw ValidationException::withMessages([
+                            "variants.{$index}.public_id" => ['Variant does not belong to this item.'],
+                        ]);
+                    }
+                    if ($foreign && $foreign->trashed() && (int) $foreign->menu_item_id === (int) $item->id) {
+                        $foreign->restore();
+                        $foreign->update($payload);
+                        $keptIds[] = $foreign->id;
+                        continue;
+                    }
+                }
+
+                $created = MenuItemVariant::query()->create([
+                    'public_id' => (string) Str::uuid(),
+                    'restaurant_id' => $restaurantId,
+                    'menu_item_id' => $item->id,
+                    'is_available' => true,
+                    'is_active' => true,
+                    ...$payload,
                 ]);
+                $keptIds[] = $created->id;
             }
+
+            MenuItemVariant::query()
+                ->where('menu_item_id', $item->id)
+                ->when(
+                    count($keptIds) > 0,
+                    fn ($q) => $q->whereNotIn('id', $keptIds),
+                )
+                ->delete();
         });
         $this->audit($request, 'menu.variant_changed', $item, $restaurantId);
 

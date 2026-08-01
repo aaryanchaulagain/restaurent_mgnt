@@ -17,7 +17,13 @@ import {
 import { formatCents } from "@/lib/utils";
 import { ApiError } from "@/lib/api/client";
 
-type Variant = { name: string; price_cents: number | string; is_default: boolean; sku: string };
+type Variant = {
+  public_id?: string;
+  name: string;
+  price_cents: number | string;
+  is_default: boolean;
+  sku: string;
+};
 type Props = { publicId?: string; restaurantKey?: string };
 
 function cleanTypeDetailsForSave(
@@ -138,6 +144,13 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
       isGlutenFree: item.dietary?.is_gluten_free ?? false,
       isHalal: item.dietary?.is_halal ?? false,
       typeDetails: item.type_details ?? emptyTypeDetailsFor(businessType) ?? {},
+      variants: (item.variants ?? []).map((v) => ({
+        public_id: v.public_id,
+        name: v.name,
+        price_cents: String(v.price_cents),
+        is_default: Boolean(v.is_default),
+        sku: v.sku ?? "",
+      })),
     };
   }, [existingItem.data, businessType]);
 
@@ -161,6 +174,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
       setIsGlutenFree(derivedItem.isGlutenFree);
       setIsHalal(derivedItem.isHalal);
       setTypeDetails(derivedItem.typeDetails);
+      setVariants(derivedItem.variants);
     }
   }, [derivedItem]);
 
@@ -225,6 +239,7 @@ export function MenuItemEditor({ publicId, restaurantKey = "default" }: Props) {
         await restaurantMenuAdminApi.syncVariants(
           itemId,
           variants.map((v) => ({
+            ...(v.public_id ? { public_id: v.public_id } : {}),
             name: v.name,
             price_cents: Number(v.price_cents),
             is_default: v.is_default,

@@ -5,6 +5,7 @@ export const restaurantNav = [
   { href: "/restaurant/branches", label: "Branches" },
   { href: "/restaurant/orders", label: "Orders" },
   { href: "/restaurant/menu", label: "Menu" },
+  { href: "/restaurant/inventory", label: "Inventory" },
   { href: "/restaurant/offers", label: "Offers" },
   { href: "/restaurant/finance", label: "Finance" },
   { href: "/restaurant/settlements", label: "Settlements" },
@@ -17,9 +18,11 @@ export const restaurantNav = [
 /** Same routes; catalogue nav label follows business type. */
 export function restaurantNavFor(businessType?: string | null) {
   const copy = getBusinessTypeConfig(businessType);
-  return restaurantNav.map((item) =>
-    item.href === "/restaurant/menu" ? { ...item, label: copy.catalogueLabel } : item,
-  );
+  return restaurantNav
+    .filter((item) => (item.href === "/restaurant/inventory" ? copy.supportsInventory : true))
+    .map((item) =>
+      item.href === "/restaurant/menu" ? { ...item, label: copy.catalogueLabel } : item,
+    );
 }
 
 export const adminNav = [

@@ -55,6 +55,8 @@ return [
         'manage_menu_modifiers',
         'manage_menu_allergens',
         'manage_menu_availability',
+        'view_inventory',
+        'manage_inventory',
         'manage_restaurant_offers',
         'view_super_admin_dashboard',
         'manage_restaurants',

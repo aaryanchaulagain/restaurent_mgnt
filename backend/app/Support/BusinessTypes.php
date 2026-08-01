@@ -154,14 +154,17 @@ final class BusinessTypes
      *   supports_dietary: bool,
      *   supports_preparation_time: bool,
      *   supports_cuisine: bool,
+     *   inventory_mode: string,
+     *   supports_inventory: bool,
      *   default_categories: list<string>
      * }
      */
     public static function catalogueConfig(?string $type): array
     {
         $normalized = self::normalize($type);
+        $inventoryMode = InventoryModes::forBusinessType($normalized);
 
-        return match ($normalized) {
+        $base = match ($normalized) {
             self::BAKERY => [
                 'type' => self::BAKERY,
                 'label' => 'Bakery',
@@ -259,5 +262,10 @@ final class BusinessTypes
                 'default_categories' => ['Starters', 'Mains', 'Drinks', 'Desserts'],
             ],
         };
+
+        $base['inventory_mode'] = $inventoryMode;
+        $base['supports_inventory'] = InventoryModes::supportsInventoryUi($normalized);
+
+        return $base;
     }
 }

@@ -48,6 +48,16 @@ export const restaurantHoursApi = {
   },
 };
 
+export type AdminMenuVariant = {
+  public_id: string;
+  name: string;
+  price_cents: number;
+  is_default: boolean;
+  sku?: string | null;
+  is_available?: boolean;
+  is_active?: boolean;
+};
+
 export type AdminMenuItem = {
   public_id: string;
   name: string;
@@ -69,8 +79,22 @@ export type AdminMenuItem = {
     is_halal?: boolean;
   };
   image?: { card_url: string; original_url: string; thumbnail_url: string; large_url: string };
-  variants?: unknown[];
+  variants?: AdminMenuVariant[];
   allergens?: unknown[];
+};
+
+export type InventoryRow = {
+  public_id: string;
+  menu_item_public_id: string;
+  menu_item_name: string;
+  variant_public_id: string | null;
+  variant_name: string | null;
+  track_stock: boolean;
+  quantity_on_hand: number;
+  low_stock_threshold: number | null;
+  force_unavailable: boolean;
+  is_low_stock: boolean;
+  is_in_stock: boolean;
 };
 
 export const restaurantMenuAdminApi = {
@@ -152,6 +176,34 @@ export const restaurantMenuAdminApi = {
   },
   updateAvailability(publicId: string, action: string) {
     return apiRequest(`/api/v1/restaurant/menu-items/${publicId}/availability`, { method: "POST", body: { action } });
+  },
+};
+
+export const restaurantInventoryApi = {
+  list(params?: { low_stock?: boolean }) {
+    const qs = new URLSearchParams();
+    if (params?.low_stock) qs.set("low_stock", "1");
+    const suffix = qs.toString() ? `?${qs}` : "";
+    return apiGet<{ inventory_mode: string; inventories: InventoryRow[] }>(
+      `/api/v1/restaurant/inventory${suffix}`,
+    );
+  },
+  lowStock() {
+    return apiGet<{ inventory_mode: string; inventories: InventoryRow[] }>(
+      "/api/v1/restaurant/inventory/low-stock",
+    );
+  },
+  configure(itemPublicId: string, body: Record<string, unknown>) {
+    return apiRequest<{ inventory: InventoryRow }>(`/api/v1/restaurant/inventory/items/${itemPublicId}`, {
+      method: "PUT",
+      body,
+    });
+  },
+  adjust(itemPublicId: string, body: Record<string, unknown>) {
+    return apiRequest<{ inventory: InventoryRow }>(
+      `/api/v1/restaurant/inventory/items/${itemPublicId}/adjust`,
+      { method: "POST", body },
+    );
   },
 };
 

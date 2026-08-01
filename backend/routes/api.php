@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Order\RestaurantOrderController;
 use App\Http\Controllers\Api\Payment\CustomerPaymentController;
 use App\Http\Controllers\Api\Public\PublicRestaurantController;
 use App\Http\Controllers\Api\Restaurant\RestaurantHoursController;
+use App\Http\Controllers\Api\Restaurant\RestaurantInventoryController;
 use App\Http\Controllers\Api\Restaurant\RestaurantMediaController;
 use App\Http\Controllers\Api\Restaurant\RestaurantMenuController;
 use App\Http\Controllers\Api\Restaurant\RestaurantOfferController;
@@ -377,6 +378,13 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
         Route::get('/', [RestaurantMenuController::class, 'listModifierGroups']);
         Route::post('/', [RestaurantMenuController::class, 'storeModifierGroup']);
         Route::post('/{groupPublicId}/options', [RestaurantMenuController::class, 'storeModifierOption']);
+    });
+
+    Route::prefix('restaurant/inventory')->middleware($restaurantPortal)->group(function (): void {
+        Route::get('/', [RestaurantInventoryController::class, 'index'])->middleware(EnsurePermission::class.':view_inventory');
+        Route::get('/low-stock', [RestaurantInventoryController::class, 'lowStock'])->middleware(EnsurePermission::class.':view_inventory');
+        Route::put('/items/{itemPublicId}', [RestaurantInventoryController::class, 'configure'])->middleware(EnsurePermission::class.':manage_inventory');
+        Route::post('/items/{itemPublicId}/adjust', [RestaurantInventoryController::class, 'adjust'])->middleware(EnsurePermission::class.':manage_inventory');
     });
 
     Route::prefix('restaurant/offers')->middleware($restaurantPortal)->middleware(EnsurePermission::class.':manage_restaurant_offers')->group(function (): void {
