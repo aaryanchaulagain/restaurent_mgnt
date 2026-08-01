@@ -36,22 +36,31 @@ class MenuItemInventory extends Model
         return 'public_id';
     }
 
-    public function isLowStock(): bool
+    public function isLowStock(?int $availableOverride = null): bool
     {
         if (! $this->track_stock || $this->low_stock_threshold === null) {
             return false;
         }
 
-        return $this->quantity_on_hand <= $this->low_stock_threshold;
+        $available = $availableOverride ?? $this->quantity_on_hand;
+
+        return $available <= $this->low_stock_threshold;
     }
 
-    public function isInStock(): bool
+    public function isInStock(?int $availableOverride = null): bool
     {
         if (! $this->track_stock) {
             return true;
         }
 
-        return $this->quantity_on_hand > 0;
+        $available = $availableOverride ?? $this->quantity_on_hand;
+
+        return $available > 0;
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(InventoryReservation::class);
     }
 
     public function restaurant(): BelongsTo

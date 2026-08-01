@@ -91,6 +91,8 @@ export type InventoryRow = {
   variant_name: string | null;
   track_stock: boolean;
   quantity_on_hand: number;
+  quantity_reserved: number;
+  quantity_available: number;
   low_stock_threshold: number | null;
   force_unavailable: boolean;
   is_low_stock: boolean;

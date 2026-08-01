@@ -24,6 +24,8 @@ final class MenuItemInventoryService
      *   variant_name: string|null,
      *   track_stock: bool,
      *   quantity_on_hand: int,
+     *   quantity_reserved: int,
+     *   quantity_available: int,
      *   low_stock_threshold: int|null,
      *   force_unavailable: bool,
      *   is_low_stock: bool,
@@ -33,6 +35,8 @@ final class MenuItemInventoryService
     public function toPayload(MenuItemInventory $inventory): array
     {
         $inventory->loadMissing(['menuItem', 'variant']);
+        $reserved = $this->reservedQuantity($inventory);
+        $available = max(0, $inventory->quantity_on_hand - $reserved);
 
         return [
             'public_id' => $inventory->public_id,
@@ -42,11 +46,30 @@ final class MenuItemInventoryService
             'variant_name' => $inventory->variant?->name,
             'track_stock' => $inventory->track_stock,
             'quantity_on_hand' => $inventory->quantity_on_hand,
+            'quantity_reserved' => $reserved,
+            'quantity_available' => $available,
             'low_stock_threshold' => $inventory->low_stock_threshold,
             'force_unavailable' => $inventory->force_unavailable,
-            'is_low_stock' => $inventory->isLowStock(),
-            'is_in_stock' => $inventory->isInStock(),
+            'is_low_stock' => $inventory->isLowStock($available),
+            'is_in_stock' => $inventory->isInStock($available),
         ];
+    }
+
+    public function reservedQuantity(MenuItemInventory $inventory): int
+    {
+        return (int) \App\Models\InventoryReservation::query()
+            ->where('menu_item_inventory_id', $inventory->id)
+            ->where('status', \App\Models\InventoryReservation::STATUS_ACTIVE)
+            ->sum('quantity');
+    }
+
+    public function availableQuantity(MenuItemInventory $inventory): int
+    {
+        if (! $inventory->track_stock) {
+            return PHP_INT_MAX;
+        }
+
+        return max(0, $inventory->quantity_on_hand - $this->reservedQuantity($inventory));
     }
 
     public function findOrCreate(
@@ -131,6 +154,12 @@ final class MenuItemInventoryService
                         'quantity_on_hand' => ['Quantity cannot be negative.'],
                     ]);
                 }
+                $reserved = $this->reservedQuantity($inventory);
+                if ($data['quantity_on_hand'] < $reserved) {
+                    throw ValidationException::withMessages([
+                        'quantity_on_hand' => ["On-hand quantity cannot be below reserved stock ({$reserved})."],
+                    ]);
+                }
                 $inventory->quantity_on_hand = $data['quantity_on_hand'];
             }
             $inventory->save();
@@ -198,6 +227,12 @@ final class MenuItemInventoryService
                     'delta' => ['Adjustment would make quantity negative.'],
                 ]);
             }
+            $reserved = $this->reservedQuantity($inventory);
+            if ($after < $reserved) {
+                throw ValidationException::withMessages([
+                    'quantity_on_hand' => ["On-hand quantity cannot be below reserved stock ({$reserved})."],
+                ]);
+            }
 
             $inventory->quantity_on_hand = $after;
             $inventory->save();
@@ -237,7 +272,7 @@ final class MenuItemInventoryService
             return;
         }
 
-        $available = $inventory->quantity_on_hand > 0;
+        $available = $this->availableQuantity($inventory) > 0;
         if ($inventory->variant) {
             $inventory->variant->update(['is_available' => $available]);
             $this->syncItemAvailabilityFromVariants($inventory->menuItem);
@@ -281,7 +316,7 @@ final class MenuItemInventoryService
         if ($itemLevel?->force_unavailable) {
             $available = false;
         } elseif ($itemLevel?->track_stock) {
-            $available = $available && $itemLevel->quantity_on_hand > 0;
+            $available = $available && $this->availableQuantity($itemLevel) > 0;
         }
 
         return [
@@ -308,7 +343,7 @@ final class MenuItemInventoryService
             return false;
         }
         if ($row?->track_stock) {
-            return $row->quantity_on_hand > 0;
+            return $this->availableQuantity($row) > 0;
         }
 
         return true;

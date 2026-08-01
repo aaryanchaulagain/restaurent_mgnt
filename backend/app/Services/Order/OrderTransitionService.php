@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\User;
 use App\Services\Auth\AuditLogger;
+use App\Services\Inventory\InventoryReservationService;
 use App\Support\OrderErrorResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,7 @@ class OrderTransitionService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly OrderEventDispatcher $events,
+        private readonly InventoryReservationService $reservations,
     ) {}
 
     public function transition(Order $order, string $newStatus, ?User $actor, string $actorType, ?string $reason = null, ?array $extra = []): Order
@@ -64,6 +66,8 @@ class OrderTransitionService
                 'reason' => $reason,
             ]);
 
+            $this->applyInventorySideEffects($order, $oldStatus, $newStatus, $reason);
+
             $this->audit->log("order.{$newStatus}", $actor, $order, restaurantId: $order->restaurant_id);
 
             DB::afterCommit(function () use ($order, $oldStatus, $newStatus) {
@@ -72,5 +76,25 @@ class OrderTransitionService
 
             return $order->fresh();
         });
+    }
+
+    private function applyInventorySideEffects(Order $order, string $oldStatus, string $newStatus, ?string $reason): void
+    {
+        if ($newStatus === 'accepted') {
+            $this->reservations->consumeForOrder($order);
+
+            return;
+        }
+
+        $releaseStatuses = ['rejected', 'expired', 'payment_failed'];
+        $cancelBeforeAccept = $newStatus === 'cancelled'
+            && in_array($oldStatus, ['awaiting_restaurant', 'pending_payment', 'payment_failed'], true);
+
+        if (in_array($newStatus, $releaseStatuses, true) || $cancelBeforeAccept) {
+            $this->reservations->releaseForOrder(
+                $order,
+                $reason ?? "order.{$newStatus}",
+            );
+        }
     }
 }

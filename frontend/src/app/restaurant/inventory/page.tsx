@@ -190,6 +190,8 @@ export default function RestaurantInventoryPage() {
                     <th className="px-4 py-3 font-medium">Product</th>
                     <th className="px-4 py-3 font-medium">Variant</th>
                     <th className="px-4 py-3 font-medium">On hand</th>
+                    <th className="px-4 py-3 font-medium">Reserved</th>
+                    <th className="px-4 py-3 font-medium">Available</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium" />
                   </tr>
@@ -202,6 +204,8 @@ export default function RestaurantInventoryPage() {
                         {row.variant_name ?? "—"}
                       </td>
                       <td className="px-4 py-3 font-medium">{row.quantity_on_hand}</td>
+                      <td className="px-4 py-3">{row.quantity_reserved ?? 0}</td>
+                      <td className="px-4 py-3 font-medium">{row.quantity_available ?? row.quantity_on_hand}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {!row.is_in_stock ? <Badge tone="error">Out of stock</Badge> : null}
@@ -232,7 +236,9 @@ export default function RestaurantInventoryPage() {
                 {adjustTarget.variant_name ? ` · ${adjustTarget.variant_name}` : ""}
               </h2>
               <p className="text-sm text-[var(--text-muted)]">
-                Current on hand: {adjustTarget.quantity_on_hand}
+                On hand: {adjustTarget.quantity_on_hand} · Reserved:{" "}
+                {adjustTarget.quantity_reserved ?? 0} · Available:{" "}
+                {adjustTarget.quantity_available ?? adjustTarget.quantity_on_hand}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Delta (+/−)" htmlFor="adj-delta">

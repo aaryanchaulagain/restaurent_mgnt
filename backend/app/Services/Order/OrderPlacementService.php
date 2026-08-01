@@ -11,6 +11,7 @@ use App\Models\OrderStatusHistory;
 use App\Models\User;
 use App\Services\Auth\AuditLogger;
 use App\Services\Cart\CartPricingService;
+use App\Services\Inventory\InventoryReservationService;
 use App\Support\OrderErrorResponse;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class OrderPlacementService
         private readonly AuditLogger $audit,
         private readonly OrderIdempotencyHasher $idempotencyHasher,
         private readonly OrderEventDispatcher $events,
+        private readonly InventoryReservationService $reservations,
     ) {}
 
     public function place(Request $request, array $input): Order
@@ -175,6 +177,7 @@ class OrderPlacementService
                 ]);
 
                 $this->snapshots->snapshotItems($order->id, $cart);
+                $this->reservations->reserveForOrder($order->fresh(['items', 'restaurant.business']));
 
                 if ($pricing['discount_cents'] > 0) {
                     OrderAdjustment::query()->create([

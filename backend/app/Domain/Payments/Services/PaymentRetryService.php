@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\Auth\AuditLogger;
+use App\Services\Inventory\InventoryReservationService;
 use App\Support\PaymentErrorResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -16,6 +17,7 @@ class PaymentRetryService
     public function __construct(
         private readonly PaymentIntentService $intentService,
         private readonly AuditLogger $audit,
+        private readonly InventoryReservationService $reservations,
     ) {}
 
     /**
@@ -74,6 +76,8 @@ class PaymentRetryService
                 $order->status = 'pending_payment';
                 $order->payment_status = PaymentStatus::Pending->value;
                 $order->save();
+                // Reservations were released on payment_failed; re-hold stock for retry.
+                $this->reservations->reserveForOrder($order->fresh(['items', 'restaurant.business']));
             }
 
             $this->audit->log(

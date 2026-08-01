@@ -15,6 +15,7 @@ class OrderErrorResponse
             'CHECKOUT_QUOTE_CONVERTED' => 'This checkout quote has already been used for an order.',
             'CART_CHANGED' => 'Your cart changed since checkout was prepared.',
             'PRICE_CHANGED' => 'An item price changed. Please review checkout again.',
+            'INSUFFICIENT_STOCK' => 'Not enough stock available for one or more items.',
             'ITEM_UNAVAILABLE' => 'An item in your cart is no longer available.',
             'VARIANT_UNAVAILABLE' => 'A selected variant is no longer available.',
             'MODIFIER_UNAVAILABLE' => 'A selected modifier is no longer available.',
