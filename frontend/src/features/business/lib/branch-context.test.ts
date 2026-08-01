@@ -52,4 +52,21 @@ describe("branch-context storage", () => {
     expect(getBranchContextPublicId()).toBeNull();
     expect(isAggregateBranchContext()).toBe(false);
   });
+
+  it("clears the legacy restaurant id so X-Restaurant-Id cannot leak across accounts", () => {
+    setBranchDashboardContext({
+      businessPublicId: "biz-1",
+      branchPublicId: "branch-1",
+      restaurantPublicId: "rest-1",
+    });
+
+    clearBranchDashboardContext();
+
+    expect(readBranchDashboardContext()).toEqual({
+      businessPublicId: null,
+      branchPublicId: null,
+      restaurantPublicId: null,
+      aggregate: false,
+    });
+  });
 });

@@ -65,6 +65,9 @@ export function clearBranchDashboardContext(): void {
   window.localStorage.removeItem(BRANCH_KEY);
   window.localStorage.removeItem(BUSINESS_KEY);
   window.localStorage.removeItem(AGGREGATE_KEY);
+  // Legacy key still drives the X-Restaurant-Id header; leaving it behind would
+  // send the previous tenant's restaurant on the next user's requests.
+  window.localStorage.removeItem(RESTAURANT_KEY);
   window.dispatchEvent(new Event("khana-branch-context-changed"));
 }
 

@@ -6,10 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/client";
+import { clearBranchDashboardContext } from "@/features/business/lib/branch-context";
 import { authApi, type LoginPortal } from "../api/auth-api";
 import type { LoginInput, RegisterInput } from "../schemas";
 import type { AuthStatus, AuthUser } from "../types";
@@ -38,6 +41,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const queryClient = useQueryClient();
+
+  /** Tenant selections and cached tenant data must never survive an account change. */
+  const resetTenantState = useCallback(() => {
+    clearBranchDashboardContext();
+    queryClient.clear();
+  }, [queryClient]);
 
   const refresh = useCallback(async () => {
     try {
@@ -77,16 +87,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const login = useCallback(async (input: LoginInput, portal: LoginPortal = "standard") => {
-    const res = await authApi.login(input, portal);
-    if (res.data.mfa_required) {
-      return { mfaRequired: true, user: null };
+  // A different account in the same browser must not inherit the previous
+  // account's branch selection or cached tenant data. Only fires on an actual
+  // switch, so a normal reload keeps the user's chosen branch.
+  const previousUserId = useRef<number | null>(null);
+  useEffect(() => {
+    const currentId = user?.id ?? null;
+    const priorId = previousUserId.current;
+    previousUserId.current = currentId;
+    if (priorId !== null && currentId !== null && priorId !== currentId) {
+      resetTenantState();
     }
-    const nextUser = res.data.user ?? null;
-    setUser(nextUser);
-    setStatus(nextUser ? "authenticated" : "guest");
-    return { mfaRequired: false, user: nextUser };
-  }, []);
+  }, [user?.id, resetTenantState]);
+
+  const login = useCallback(
+    async (input: LoginInput, portal: LoginPortal = "standard") => {
+      // Drop any previous account's branch/restaurant selection before the new
+      // user's authorized branches are resolved.
+      resetTenantState();
+      const res = await authApi.login(input, portal);
+      if (res.data.mfa_required) {
+        return { mfaRequired: true, user: null };
+      }
+      const nextUser = res.data.user ?? null;
+      setUser(nextUser);
+      setStatus(nextUser ? "authenticated" : "guest");
+      return { mfaRequired: false, user: nextUser };
+    },
+    [resetTenantState],
+  );
 
   const register = useCallback(
     async (input: RegisterInput) => {
@@ -107,8 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       setStatus("guest");
+      resetTenantState();
     }
-  }, []);
+  }, [resetTenantState]);
 
   const logoutAll = useCallback(async () => {
     try {
@@ -116,8 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       setStatus("guest");
+      resetTenantState();
     }
-  }, []);
+  }, [resetTenantState]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

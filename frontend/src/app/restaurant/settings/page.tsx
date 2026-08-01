@@ -3,16 +3,18 @@
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FileUpload, Input, Switch, Textarea } from "@/components/ui/forms";
+import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
 import { restaurantNav } from "@/lib/admin-nav";
 import { useState } from "react";
 
 export default function RestaurantSettingsPage() {
+  const profile = useRestaurantProfile();
   const [delivery, setDelivery] = useState(true);
   const [pickup, setPickup] = useState(true);
 
   return (
     <AdminShell
-      brand="Himalayan Kitchen"
+      brand={profile.data?.trading_name ?? "Restaurant"}
       portalLabel="Restaurant Admin"
       items={restaurantNav}
       title="Settings"
@@ -23,12 +25,17 @@ export default function RestaurantSettingsPage() {
         <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-white p-5">
           <h2 className="text-2xl">Restaurant profile</h2>
           <Field label="Display name" htmlFor="name">
-            <Input id="name" defaultValue="Himalayan Kitchen" />
+            <Input
+              id="name"
+              key={profile.data?.trading_name ?? "name"}
+              defaultValue={profile.data?.trading_name ?? ""}
+            />
           </Field>
           <Field label="Description" htmlFor="desc">
             <Textarea
               id="desc"
-              defaultValue="Mountain-inspired thalis, smoky tandoor breads and slow-cooked dals."
+              key={profile.data?.public_id ?? "desc"}
+              defaultValue={profile.data?.short_description ?? profile.data?.description ?? ""}
             />
           </Field>
           <FileUpload label="Upload logo" />
