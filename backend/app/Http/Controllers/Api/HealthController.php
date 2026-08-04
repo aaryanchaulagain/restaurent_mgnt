@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\ReleaseIdentifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +27,10 @@ class HealthController extends Controller
         $ok = ! in_array('fail', $checks, true);
 
         return response()
-            ->json([
+            ->json(array_merge([
                 'status' => $ok ? 'ok' : 'degraded',
                 'checks' => $checks,
-                'version' => config('app.version', 'v1'),
-            ], $ok ? 200 : 503)
+            ], ReleaseIdentifier::forHealth()), $ok ? 200 : 503)
             ->header('X-Request-Id', (string) request()->attributes->get('request_id', ''));
     }
 

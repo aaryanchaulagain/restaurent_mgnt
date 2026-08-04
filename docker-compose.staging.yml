@@ -1,0 +1,102 @@
+# Staging-oriented Compose overlay — isolated from local docker-compose.yml defaults.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --build
+# Secrets must come from an env file that is NOT committed (e.g. .env.staging on the host).
+# This file uses placeholders / non-production defaults only.
+
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: suvakamana_staging
+      POSTGRES_USER: suvakamana_staging
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD:-change-me-staging-only}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    ports: []  # do not publish DB publicly in staging topologies by default
+
+  redis:
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_staging_data:/data
+    ports: []
+
+  backend:
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_URL: ${STAGING_API_URL:-https://api-staging.example.com}
+      APP_RELEASE_SHA: ${APP_RELEASE_SHA:-}
+      FRONTEND_URL: ${STAGING_FRONTEND_URL:-https://staging.example.com}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: suvakamana_staging
+      DB_USERNAME: suvakamana_staging
+      DB_PASSWORD: ${STAGING_DB_PASSWORD:-change-me-staging-only}
+      REDIS_HOST: redis
+      REDIS_DB: "2"
+      REDIS_PREFIX: suvakamana-staging-
+      CACHE_STORE: redis
+      CACHE_PREFIX: suvakamana-staging-cache-
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      SESSION_SECURE_COOKIE: "true"
+      MAIL_MAILER: ${STAGING_MAIL_MAILER:-log}
+      STRIPE_SECRET_KEY: ${STAGING_STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STAGING_STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STAGING_STRIPE_WEBHOOK_SECRET:-}
+    volumes:
+      - backend_staging_storage:/var/www/html/storage/app
+    # Prefer a durable worker + http process in real staging (documented in docs/staging-deployment.md).
+    command: >
+      sh -c "php artisan migrate --force &&
+             php artisan storage:link &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+
+  queue:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+      - backend_staging_storage:/var/www/html/storage/app
+    env_file:
+      - path: .env.staging
+        required: false
+    environment:
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: suvakamana_staging
+      DB_USERNAME: suvakamana_staging
+      DB_PASSWORD: ${STAGING_DB_PASSWORD:-change-me-staging-only}
+      REDIS_HOST: redis
+      REDIS_DB: "2"
+      REDIS_PREFIX: suvakamana-staging-
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      CACHE_PREFIX: suvakamana-staging-cache-
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: php artisan queue:work --queue=notifications,default --sleep=3 --tries=3 --timeout=120
+
+  frontend:
+    environment:
+      NEXT_PUBLIC_API_URL: ${STAGING_PUBLIC_API_URL:-https://api-staging.example.com/api/v1}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STAGING_STRIPE_PUBLISHABLE_KEY:-pk_test_replace_me}
+      NEXT_PUBLIC_ENABLE_DEMO_FALLBACK: "false"
+      NEXT_PUBLIC_APP_RELEASE_SHA: ${APP_RELEASE_SHA:-}
+      BACKEND_ORIGIN: ${STAGING_API_URL:-http://backend:8000}
+    command: sh -c "npm ci && npm run build && npm run start -- --hostname 0.0.0.0 --port 3000"
+
+volumes:
+  postgres_staging_data:
+  redis_staging_data:
+  backend_staging_storage:

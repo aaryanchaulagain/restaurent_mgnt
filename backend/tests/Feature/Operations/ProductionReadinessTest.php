@@ -68,8 +68,9 @@ class ProductionReadinessTest extends TestCase
     public function test_secret_values_are_never_printed_by_command(): void
     {
         config([
-            'payments.stripe.secret_key' => 'sk_live_SHOULD_NOT_APPEAR',
+            'payments.stripe.secret_key' => 'sk_test_SHOULD_NOT_APPEAR',
             'payments.stripe.webhook_secret' => 'whsec_SHOULD_NOT_APPEAR',
+            'payments.stripe.publishable_key' => 'pk_test_SHOULD_NOT_APPEAR',
         ]);
 
         $this->artisan('app:production-readiness')
@@ -79,8 +80,9 @@ class ProductionReadinessTest extends TestCase
         // Capture via json flag
         Artisan::call('app:production-readiness', ['--json' => true]);
         $out = Artisan::output();
-        $this->assertStringNotContainsString('sk_live_SHOULD_NOT_APPEAR', $out);
+        $this->assertStringNotContainsString('sk_test_SHOULD_NOT_APPEAR', $out);
         $this->assertStringNotContainsString('whsec_SHOULD_NOT_APPEAR', $out);
+        $this->assertStringNotContainsString('pk_test_SHOULD_NOT_APPEAR', $out);
     }
 
     public function test_demo_seed_credentials_fail_in_production(): void

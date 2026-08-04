@@ -72,5 +72,12 @@ jobs:
         run: php artisan migrate --force
       - name: Dependency audit (report only)
         run: composer audit || true
+      - name: Staging readiness (CI-safe local evaluate)
+        run: |
+          php artisan app:production-readiness --env=local || true
+          test -f ../scripts/deploy-staging.sh
+          test -f ../scripts/verify-staging.sh
+          ! grep -R "sk_live_" ../scripts ../backend/.env.staging.example ../frontend/.env.staging.example
+          ! grep -R "C:\\\\Users\\\\" ../scripts
       - name: Run tests
         run: php artisan test

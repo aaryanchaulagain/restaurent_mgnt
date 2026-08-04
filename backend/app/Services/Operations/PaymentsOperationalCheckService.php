@@ -2,6 +2,7 @@
 
 namespace App\Services\Operations;
 
+use App\Support\StripeKeyMode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -68,6 +69,13 @@ class PaymentsOperationalCheckService
             $fails[] = 'Stripe webhook route not registered';
         }
 
+        $secretValue = is_string(config('payments.stripe.secret_key')) ? config('payments.stripe.secret_key') : null;
+        $pubValue = is_string(config('payments.stripe.publishable_key')) ? config('payments.stripe.publishable_key') : null;
+        $mode = StripeKeyMode::compare($secretValue, $pubValue);
+        if (! $mode['consistent']) {
+            $fails[] = $mode['message'];
+        }
+
         $report = [
             'payment_driver' => $driver,
             'methods_enabled' => $secret ? ['card_via_stripe'] : [],
@@ -76,6 +84,9 @@ class PaymentsOperationalCheckService
             'webhook_secret_configured' => $wh,
             'webhook_route_registered' => $webhookRoute,
             'signature_verification' => $wh ? 'configured' : 'missing_secret',
+            'stripe_mode_consistent' => $mode['consistent'],
+            'stripe_secret_mode' => $mode['secret_mode'],
+            'stripe_publishable_mode' => $mode['publishable_mode'],
             'failed_or_unprocessed_webhook_count' => $failedWebhooks,
             'oldest_unprocessed_at' => $oldestUnprocessed,
             'live_api_calls' => false,
@@ -83,6 +94,7 @@ class PaymentsOperationalCheckService
                 'This check never prints secret keys or webhook secrets.',
                 'This check does not create charges or call Stripe by default.',
                 'Webhook security relies on signature verification and idempotent event processing.',
+                'Mixed test/live Stripe keys are rejected.',
             ],
             'warnings' => $warnings,
             'failures' => $fails,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\ReleaseIdentifier;
 use Illuminate\Http\JsonResponse;
 
 class HealthLiveController extends Controller
@@ -12,6 +13,7 @@ class HealthLiveController extends Controller
     {
         return response()->json([
             'status' => 'ok',
+            ...ReleaseIdentifier::forHealth(),
         ])->header('X-Request-Id', (string) request()->attributes->get('request_id', ''));
     }
 }

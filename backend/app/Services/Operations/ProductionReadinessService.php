@@ -2,6 +2,7 @@
 
 namespace App\Services\Operations;
 
+use App\Support\StripeKeyMode;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
- * Read-only production configuration validator.
+ * Read-only production/staging configuration validator.
  * Never prints environment-variable values.
  */
 class ProductionReadinessService
@@ -21,6 +22,8 @@ class ProductionReadinessService
     {
         $env = $forceEnv ?? (string) config('app.env', 'production');
         $isProd = in_array($env, ['production', 'prod'], true);
+        $isStaging = $env === 'staging';
+        $isHardened = $isProd || $isStaging;
         $results = [];
 
         $results[] = $this->check(
@@ -28,13 +31,13 @@ class ProductionReadinessService
             in_array($env, ['local', 'testing', 'staging', 'production', 'prod'], true),
             'Application environment is set.',
             'APP_ENV is missing or unusual.',
-            warn: ! $isProd && $env === 'local',
+            warn: ! $isHardened && $env === 'local',
             warnMessage: 'APP_ENV is local — expected for development only.',
         );
 
         $debug = (bool) config('app.debug');
-        if ($isProd && $debug) {
-            $results[] = $this->fail('APP_DEBUG', 'APP_DEBUG must be false in production.');
+        if ($isHardened && $debug) {
+            $results[] = $this->fail('APP_DEBUG', 'APP_DEBUG must be false in '.$env.'.');
         } else {
             $results[] = $this->pass('APP_DEBUG', $debug ? 'Debug enabled (non-production).' : 'Debug disabled.');
         }
@@ -45,11 +48,11 @@ class ProductionReadinessService
             : $this->fail('APP_KEY', 'APP_KEY is required.');
 
         $url = (string) config('app.url');
-        if ($isProd) {
+        if ($isHardened) {
             $https = str_starts_with(strtolower($url), 'https://');
             $results[] = $https
                 ? $this->pass('APP_URL', 'APP_URL uses HTTPS.')
-                : $this->fail('APP_URL', 'APP_URL must be HTTPS in production.');
+                : $this->fail('APP_URL', 'APP_URL must be HTTPS in '.$env.'.');
         } else {
             $results[] = $url !== ''
                 ? $this->pass('APP_URL', 'APP_URL is configured.')
@@ -74,8 +77,8 @@ class ProductionReadinessService
         }
 
         $queue = (string) config('queue.default');
-        if ($isProd && in_array($queue, ['sync', 'null'], true)) {
-            $results[] = $this->fail('QUEUE_CONNECTION', 'Queue driver "'.$queue.'" is unsafe for production load; use redis/database/sqs.');
+        if ($isHardened && in_array($queue, ['sync', 'null'], true)) {
+            $results[] = $this->fail('QUEUE_CONNECTION', 'Queue driver "'.$queue.'" is unsafe for '.$env.'; use redis/database/sqs.');
         } elseif (in_array($queue, ['sync', 'null'], true)) {
             $results[] = $this->warn('QUEUE_CONNECTION', 'Queue driver is '.$queue.' — acceptable for local only.');
         } else {
@@ -90,7 +93,7 @@ class ProductionReadinessService
             ? $this->pass('SESSION_DRIVER', 'Session driver is configured.')
             : $this->fail('SESSION_DRIVER', 'Session driver is missing.');
 
-        if ($isProd && config('session.secure') !== true) {
+        if ($isHardened && config('session.secure') !== true) {
             $results[] = $this->warn('SESSION_SECURE_COOKIE', 'SESSION_SECURE_COOKIE should be true behind HTTPS.');
         } else {
             $results[] = $this->pass('SESSION_SECURE_COOKIE', 'Session cookie security setting reviewed.');
@@ -99,6 +102,8 @@ class ProductionReadinessService
         $mailer = (string) config('mail.default');
         if ($isProd && in_array($mailer, ['log', 'array'], true)) {
             $results[] = $this->fail('MAIL_MAILER', 'Mailer "'.$mailer.'" will not deliver email in production.');
+        } elseif ($isStaging && in_array($mailer, ['log', 'array'], true)) {
+            $results[] = $this->warn('MAIL_MAILER', 'Staging mailer is '.$mailer.' — use a sandbox SMTP for invitation/reset tests.');
         } elseif (in_array($mailer, ['log', 'array'], true)) {
             $results[] = $this->warn('MAIL_MAILER', 'Mailer is '.$mailer.' — local only.');
         } else {
@@ -109,25 +114,49 @@ class ProductionReadinessService
             ? $this->pass('FILESYSTEM_DISK', 'Filesystem disk is configured.')
             : $this->fail('FILESYSTEM_DISK', 'Filesystem disk is missing.');
 
-        $paymentsEnabled = filled(config('payments.stripe.secret_key'))
-            || filled(config('payments.stripe.publishable_key'));
-        if ($paymentsEnabled || $isProd) {
-            $secret = filled(config('payments.stripe.secret_key'));
-            $pub = filled(config('payments.stripe.publishable_key'));
+        $secretKey = config('payments.stripe.secret_key');
+        $pubKey = config('payments.stripe.publishable_key');
+        $paymentsEnabled = filled($secretKey) || filled($pubKey);
+        if ($paymentsEnabled || $isHardened) {
+            $secret = filled($secretKey);
+            $pub = filled($pubKey);
             $wh = filled(config('payments.stripe.webhook_secret'));
             $results[] = $secret
                 ? $this->pass('STRIPE_SECRET_KEY', 'Stripe secret key is present.')
-                : ($isProd ? $this->fail('STRIPE_SECRET_KEY', 'Required when card payments are enabled.') : $this->warn('STRIPE_SECRET_KEY', 'Missing (payments disabled locally).'));
+                : ($isHardened ? $this->fail('STRIPE_SECRET_KEY', 'Required when card payments are enabled.') : $this->warn('STRIPE_SECRET_KEY', 'Missing (payments disabled locally).'));
             $results[] = $pub
                 ? $this->pass('STRIPE_PUBLISHABLE_KEY', 'Stripe publishable key is present.')
-                : ($isProd ? $this->warn('STRIPE_PUBLISHABLE_KEY', 'Missing publishable key.') : $this->warn('STRIPE_PUBLISHABLE_KEY', 'Missing (local).'));
-            if ($secret || $isProd) {
+                : ($isHardened ? $this->warn('STRIPE_PUBLISHABLE_KEY', 'Missing publishable key.') : $this->warn('STRIPE_PUBLISHABLE_KEY', 'Missing (local).'));
+            if ($secret || $isHardened) {
                 $results[] = $wh
                     ? $this->pass('STRIPE_WEBHOOK_SECRET', 'Webhook secret is present.')
                     : $this->fail('STRIPE_WEBHOOK_SECRET', 'Required when Stripe payments are enabled.');
             }
+
+            $mode = StripeKeyMode::compare(
+                is_string($secretKey) ? $secretKey : null,
+                is_string($pubKey) ? $pubKey : null,
+            );
+            if (! $mode['consistent']) {
+                $results[] = $this->fail('STRIPE_MODE', $mode['message']);
+            } elseif ($isStaging && ($mode['secret_mode'] === 'live' || $mode['publishable_mode'] === 'live')) {
+                $results[] = $this->fail('STRIPE_MODE', 'Staging must use Stripe test keys only.');
+            } elseif ($secret || $pub) {
+                $results[] = $this->pass('STRIPE_MODE', $mode['message'].($mode['secret_mode'] ? ' ('.$mode['secret_mode'].')' : ''));
+            }
         } else {
             $results[] = $this->warn('PAYMENTS', 'Stripe keys not configured — card payments unavailable.');
+        }
+
+        if ($isStaging) {
+            $cachePrefix = (string) config('cache.prefix');
+            $redisPrefix = (string) config('database.redis.options.prefix', config('database.redis.prefix', ''));
+            if ($cachePrefix === '' || (! str_contains(strtolower($cachePrefix), 'stag') && ! str_contains(strtolower($cachePrefix), 'staging'))) {
+                $results[] = $this->warn('CACHE_PREFIX', 'Prefer a staging-specific CACHE_PREFIX to isolate from production.');
+            } else {
+                $results[] = $this->pass('CACHE_PREFIX', 'Cache prefix appears staging-scoped.');
+            }
+            unset($redisPrefix);
         }
 
         $results[] = $this->pass('TRUSTED_PROXIES', 'Configure TrustProxies behind a TLS terminator (see production runbook).');
@@ -142,7 +171,7 @@ class ProductionReadinessService
         }
 
         $publicStorage = public_path('storage');
-        if ($isProd) {
+        if ($isHardened) {
             $results[] = (File::exists($publicStorage) || is_link($publicStorage))
                 ? $this->pass('STORAGE_LINK', 'Public storage link exists.')
                 : $this->warn('STORAGE_LINK', 'Run php artisan storage:link when public media is required.');
@@ -154,7 +183,7 @@ class ProductionReadinessService
         if ($pending === null) {
             $results[] = $this->warn('MIGRATIONS', 'Could not determine migration status.');
         } elseif ($pending > 0) {
-            $results[] = $isProd
+            $results[] = $isHardened
                 ? $this->fail('MIGRATIONS', $pending.' pending migration(s). Run after backup.')
                 : $this->warn('MIGRATIONS', $pending.' pending migration(s).');
         } else {
