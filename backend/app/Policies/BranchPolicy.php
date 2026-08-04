@@ -16,7 +16,7 @@ class BranchPolicy
             return true;
         }
 
-        if ($this->isBusinessAdmin($user, $branch->business_id)) {
+        if ($this->isBusinessLevel($user, $branch->business_id)) {
             return true;
         }
 
@@ -62,9 +62,21 @@ class BranchPolicy
         return $this->activeBranchRole($user, $branch) === BusinessRoles::BRANCH_MANAGER;
     }
 
+    /**
+     * Branch operational reports: business-level roles or branch managers only.
+     * Kitchen/order/delivery staff do not receive reporting by default.
+     */
     public function viewReports(User $user, Branch $branch): bool
     {
-        return $this->view($user, $branch);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->isBusinessLevel($user, $branch->business_id)) {
+            return true;
+        }
+
+        return $this->activeBranchRole($user, $branch) === BusinessRoles::BRANCH_MANAGER;
     }
 
     private function isBusinessAdmin(User $user, int $businessId): bool
@@ -74,6 +86,16 @@ class BranchPolicy
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->whereIn('role', BusinessRoles::businessManagers())
+            ->exists();
+    }
+
+    private function isBusinessLevel(User $user, int $businessId): bool
+    {
+        return BusinessUser::query()
+            ->where('business_id', $businessId)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereIn('role', BusinessRoles::businessAssignable())
             ->exists();
     }
 

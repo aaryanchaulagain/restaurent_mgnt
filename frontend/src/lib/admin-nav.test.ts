@@ -65,10 +65,40 @@ describe("permission-aware restaurant navigation", () => {
     expect(hrefs).not.toContain("/restaurant/inventory");
   });
 
-  it("maps paths to required permissions", () => {
-    expect(requiredPermissionsForPath("/restaurant/inventory")).toContain("view_inventory");
-    expect(requiredPermissionsForPath("/restaurant/settings/payments")).toContain(
-      "manage_payment_accounts",
+  it("shows Reports for owners and branch managers with report permissions", () => {
+    const ownerHrefs = filterNavByPermissions(
+      restaurantNavItems,
+      ["view_restaurant_dashboard", "view_business_reports", "view_branch_reports"],
+      "restaurant",
+    ).map((i) => i.href);
+    expect(ownerHrefs).toContain("/restaurant/reports");
+
+    const managerHrefs = filterNavByPermissions(
+      restaurantNavItems,
+      ["view_restaurant_dashboard", "view_branch_reports"],
+      "restaurant",
+    ).map((i) => i.href);
+    expect(managerHrefs).toContain("/restaurant/reports");
+  });
+
+  it("hides Reports from staff without report permissions", () => {
+    const hrefs = filterNavByPermissions(
+      restaurantNavItems,
+      [
+        "view_restaurant_dashboard",
+        "view_orders",
+        "view_restaurant_orders",
+        "prepare_restaurant_orders",
+        "view_menu",
+      ],
+      "restaurant",
+    ).map((i) => i.href);
+    expect(hrefs).not.toContain("/restaurant/reports");
+  });
+
+  it("maps reports path to required permissions", () => {
+    expect(requiredPermissionsForPath("/restaurant/reports")).toEqual(
+      expect.arrayContaining(["view_branch_reports", "view_business_reports"]),
     );
   });
 });

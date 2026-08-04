@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/client";
 import { adminRestaurantApi } from "@/features/admin/api/admin-restaurant-api";
 import { openRestaurantMenuEditor } from "@/features/admin/lib/open-restaurant-menu";
 import { setRestaurantContextPublicId } from "@/features/restaurant/lib/restaurant-context";
+import { AdminBranchOversightPanel } from "@/features/reporting/components/admin-branch-oversight-panel";
 
 export default function AdminRestaurantDetailPage({
   params,
@@ -147,6 +148,14 @@ export default function AdminRestaurantDetailPage({
       {detail.isLoading || !restaurant ? (
         <Skeleton className="h-64 w-full" />
       ) : (
+        <div className="space-y-6">
+        {restaurant.business_public_id && restaurant.branch_public_id ? (
+          <AdminBranchOversightPanel
+            businessPublicId={restaurant.business_public_id}
+            branchPublicId={restaurant.branch_public_id}
+            restaurantName={restaurant.trading_name}
+          />
+        ) : null}
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-lg border bg-white p-5">
             <div className="flex items-center justify-between gap-3">
@@ -327,6 +336,7 @@ export default function AdminRestaurantDetailPage({
               ) : null}
             </form>
           </section>
+        </div>
         </div>
       )}
     </AdminShell>

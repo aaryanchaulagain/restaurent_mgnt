@@ -42,9 +42,38 @@ class BusinessPolicy
         return $this->update($user, $business);
     }
 
+    /**
+     * Business aggregate reports: owners, admins, accountants, super admin.
+     * Branch-only staff must not access all-business aggregates.
+     */
     public function viewReports(User $user, Business $business): bool
     {
-        return $this->view($user, $business);
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $role = $this->activeBusinessRole($user, $business);
+
+        return in_array($role, [
+            BusinessRoles::BUSINESS_OWNER,
+            BusinessRoles::BUSINESS_ADMIN,
+            BusinessRoles::ACCOUNTANT,
+        ], true);
+    }
+
+    public function viewFinance(User $user, Business $business): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $role = $this->activeBusinessRole($user, $business);
+
+        return in_array($role, [
+            BusinessRoles::BUSINESS_OWNER,
+            BusinessRoles::BUSINESS_ADMIN,
+            BusinessRoles::ACCOUNTANT,
+        ], true);
     }
 
     public function suspend(User $user, Business $business): bool

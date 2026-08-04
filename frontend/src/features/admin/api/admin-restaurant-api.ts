@@ -30,6 +30,8 @@ export type AdminRestaurantDetail = AdminRestaurantListItem & {
   business_phone: string | null;
   timezone: string | null;
   currency: string | null;
+  business_public_id?: string | null;
+  branch_public_id?: string | null;
   suspended_at: string | null;
   suspension_reason: string | null;
   temporarily_closed_reason: string | null;

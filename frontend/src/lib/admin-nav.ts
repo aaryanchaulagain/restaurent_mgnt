@@ -44,6 +44,11 @@ export const restaurantNavItems: NavItem[] = [
     permissions: ["view_finance", "view_restaurant_payment_summaries"],
   },
   {
+    href: "/restaurant/reports",
+    label: "Reports",
+    permissions: ["view_branch_reports", "view_business_reports"],
+  },
+  {
     href: "/restaurant/settlements",
     label: "Settlements",
     permissions: ["view_settlements"],

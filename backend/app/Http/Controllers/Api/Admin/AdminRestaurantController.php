@@ -69,6 +69,8 @@ class AdminRestaurantController extends Controller
                 'commissionAgreements' => fn ($q) => $q->latest('id'),
                 'restaurantUsers' => fn ($q) => $q->where('status', '!=', 'removed')->with(['user', 'role']),
                 'primaryCuisine',
+                'branch.business',
+                'business',
             ])
             ->firstOrFail();
 
@@ -237,12 +239,16 @@ class AdminRestaurantController extends Controller
 
     private function detailResource(Restaurant $r): array
     {
+        $r->loadMissing(['branch', 'business']);
+
         return array_merge($this->listResource($r), [
             'description' => $r->description,
             'short_description' => $r->short_description,
             'business_phone' => $r->business_phone,
             'timezone' => $r->timezone,
             'currency' => $r->currency,
+            'business_public_id' => $r->business?->public_id ?? $r->branch?->business?->public_id,
+            'branch_public_id' => $r->branch?->public_id,
             'suspended_at' => $r->suspended_at,
             'suspension_reason' => $r->suspension_reason,
             'temporarily_closed_reason' => $r->temporarily_closed_reason,

@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\Partner\PartnerApplicationController;
 use App\Http\Controllers\Api\Business\BusinessBranchController;
+use App\Http\Controllers\Api\Business\BusinessReportController;
+use App\Http\Controllers\Api\Admin\AdminBusinessReportController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Checkout\CheckoutController;
 use App\Http\Controllers\Api\Customer\CustomerAddressController;
@@ -325,6 +327,22 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
         Route::post('/{business}/branches/{branch}/invitations', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'store']);
         Route::post('/{business}/branches/{branch}/invitations/{invitation}/resend', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'resend']);
         Route::post('/{business}/branches/{branch}/invitations/{invitation}/revoke', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'revoke']);
+
+        Route::get('/{business}/reports/summary', [BusinessReportController::class, 'summary']);
+        Route::get('/{business}/reports/branches', [BusinessReportController::class, 'branches']);
+        Route::get('/{business}/branches/{branch}/reports/summary', [BusinessReportController::class, 'branchSummary']);
+        Route::get('/{business}/branches/{branch}/reports/orders', [BusinessReportController::class, 'branchOrders']);
+        Route::get('/{business}/branches/{branch}/reports/inventory', [BusinessReportController::class, 'branchInventory']);
+        Route::get('/{business}/branches/{branch}/reports/payments', [BusinessReportController::class, 'branchPayments']);
+    });
+
+    Route::prefix('admin/businesses')->middleware([
+        EnsureRole::class.':super_admin',
+        EnsureMfaSatisfied::class,
+        EnsurePermission::class.':manage_restaurants',
+    ])->group(function (): void {
+        Route::get('/{business}/reports/summary', [AdminBusinessReportController::class, 'summary']);
+        Route::get('/{business}/branches/{branch}/reports/summary', [AdminBusinessReportController::class, 'branchSummary']);
     });
 
     $restaurantPortal = [

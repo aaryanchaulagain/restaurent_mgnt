@@ -71,6 +71,14 @@ final class BranchRolePermissionMatrix
             'view_finance',
             'view_settlements',
             'view_restaurant_payment_summaries',
+            'view_branch_reports',
+            'view_business_reports',
+            'view_branch_finance_summary',
+            'view_business_finance',
+            'view_inventory_reports',
+            'view_order_reports',
+            'view_payment_reports',
+            'view_delivery_reports',
             'view_branch_staff',
             'invite_branch_staff',
             'manage_branch_staff',
@@ -91,6 +99,13 @@ final class BranchRolePermissionMatrix
             'view_settlements',
             'view_restaurant_payment_summaries',
             'view_all_business_branches',
+            'view_branch_reports',
+            'view_business_reports',
+            'view_branch_finance_summary',
+            'view_business_finance',
+            'view_order_reports',
+            'view_payment_reports',
+            'view_delivery_reports',
         ];
     }
 
@@ -127,11 +142,18 @@ final class BranchRolePermissionMatrix
             'complete_restaurant_orders',
             'cancel_restaurant_orders',
             'view_restaurant_payment_summaries',
+            'view_branch_reports',
+            'view_branch_finance_summary',
+            'view_inventory_reports',
+            'view_order_reports',
+            'view_payment_reports',
+            'view_delivery_reports',
             'view_branch_staff',
             'invite_branch_staff',
             'manage_branch_staff',
             // Explicitly NO: manage_payment_accounts, request_restaurant_refund,
-            // activate_restaurant, manage_business_*, invite_branch_manager by default
+            // activate_restaurant, manage_business_*, invite_branch_manager,
+            // view_business_reports, view_business_finance by default
         ];
     }
 
