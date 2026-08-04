@@ -20,13 +20,11 @@ export const restaurantStaffApi = {
     first_name: string;
     last_name: string;
     email: string;
-    password?: string;
     phone?: string;
     role: "restaurant_manager" | "restaurant_staff";
   }) {
     return apiRequest<{
       member: RestaurantStaffMember;
-      temporary_password: string | null;
     }>("/api/v1/restaurant/staff", { method: "POST", body });
   },
 

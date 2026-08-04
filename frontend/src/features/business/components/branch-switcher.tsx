@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { businessBranchApi, type BranchDto } from "@/features/business/api/business-branch-api";
 import {
   isAggregateBranchContext,
@@ -19,6 +19,7 @@ const BRANCH_REQUIRED_PREFIXES = [
   "/restaurant/finance",
   "/restaurant/settlements",
   "/restaurant/staff",
+  "/restaurant/inventory",
 ];
 
 function needsSpecificBranch(pathname: string): boolean {
@@ -30,6 +31,7 @@ function needsSpecificBranch(pathname: string): boolean {
 export function BranchSwitcher() {
   const pathname = usePathname();
   const router = useRouter();
+  const qc = useQueryClient();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -83,6 +85,11 @@ export function BranchSwitcher() {
       restaurantPublicId: branch.restaurant_public_id ?? null,
       aggregate: false,
     });
+    // Drop tenant-scoped caches so previous branch data never flashes.
+    void qc.cancelQueries();
+    qc.removeQueries({ queryKey: ["restaurant"] });
+    qc.removeQueries({ queryKey: ["restaurant-authorization"] });
+    qc.invalidateQueries({ queryKey: ["business-branch-context"] });
     if (navigate && pathname.startsWith("/restaurant/branches")) {
       router.push(`/restaurant/branches/${branch.business_public_id}/${branch.public_id}`);
     }

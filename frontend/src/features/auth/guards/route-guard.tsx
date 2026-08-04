@@ -230,6 +230,8 @@ export function RestaurantGuard({ children }: { children: ReactNode }) {
     );
   }
 
+  // Module permissions come from /restaurant/authorization (branch-scoped).
+  // Do not gate the whole portal on legacy unscoped user.permissions.
   return (
     <AuthGuard
       roles={[
@@ -244,7 +246,6 @@ export function RestaurantGuard({ children }: { children: ReactNode }) {
         "inventory_manager",
         "delivery_staff",
       ]}
-      permissions={["view_restaurant_dashboard"]}
       requireMfaForAdmin={false}
     >
       {children}

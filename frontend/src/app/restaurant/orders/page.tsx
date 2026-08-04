@@ -11,8 +11,7 @@ import { Tabs, useToast } from "@/components/ui/navigation";
 import { Modal } from "@/components/ui/overlay";
 import { restaurantOrderApi, type OrderDetail } from "@/features/orders/api/order-api";
 import { OrderStatusBadge } from "@/features/orders/components/order-status-badge";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { formatCents } from "@/lib/utils";
 
 const tabs = [
@@ -27,7 +26,7 @@ const tabs = [
 ];
 
 export default function RestaurantOrdersPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
   const qc = useQueryClient();
   const { push } = useToast();
   const [tab, setTab] = useState("");
@@ -71,9 +70,9 @@ export default function RestaurantOrdersPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title={`Orders${newCount > 0 ? ` (${newCount} new)` : ""}`}
       subtitle="Accept, prepare and complete live tickets"
     >

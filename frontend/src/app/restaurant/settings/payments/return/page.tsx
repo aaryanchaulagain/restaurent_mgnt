@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Skeleton } from "@/components/ui/feedback";
-import { restaurantNav } from "@/lib/admin-nav";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { restaurantPaymentAccountApi } from "@/features/payments/api/payment-api";
 
 export default function RestaurantPaymentsReturnPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -32,9 +31,9 @@ export default function RestaurantPaymentsReturnPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Updating payment status"
       subtitle="Syncing your Stripe Connect account"
     >

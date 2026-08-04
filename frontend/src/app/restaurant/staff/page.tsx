@@ -7,13 +7,12 @@ import { Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
-import { restaurantNav } from "@/lib/admin-nav";
-import { ApiError } from "@/lib/api/client";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { restaurantStaffApi } from "@/features/restaurant/api/restaurant-staff-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
+import { ApiError } from "@/lib/api/client";
 
 export default function RestaurantStaffPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
   const { push } = useToast();
   const qc = useQueryClient();
   const [firstName, setFirstName] = useState("");
@@ -22,7 +21,6 @@ export default function RestaurantStaffPage() {
   const [role, setRole] = useState<"restaurant_manager" | "restaurant_staff">(
     "restaurant_staff",
   );
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   const staff = useQuery({
     queryKey: ["restaurant", "staff"],
@@ -37,13 +35,16 @@ export default function RestaurantStaffPage() {
         email,
         role,
       }),
-    onSuccess: (res) => {
-      setTempPassword(res.data.temporary_password);
+    onSuccess: () => {
       setFirstName("");
       setLastName("");
       setEmail("");
       qc.invalidateQueries({ queryKey: ["restaurant", "staff"] });
-      push({ title: "Staff added", tone: "success" });
+      push({
+        title: "Staff assigned",
+        description: "Existing users can be assigned here. New staff must use a branch invitation.",
+        tone: "success",
+      });
     },
     onError: (err: unknown) => {
       push({
@@ -69,13 +70,11 @@ export default function RestaurantStaffPage() {
     },
   });
 
-  const brand = profile.data?.trading_name ?? "Restaurant";
-
   return (
     <AdminShell
       brand={brand}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Staff"
       subtitle="Managers and staff for your restaurant only"
     >
@@ -133,7 +132,11 @@ export default function RestaurantStaffPage() {
           invite.mutate();
         }}
       >
-        <h2 className="sm:col-span-2 text-lg font-medium">Invite staff</h2>
+        <h2 className="sm:col-span-2 text-lg font-medium">Assign existing staff</h2>
+        <p className="sm:col-span-2 text-sm text-[var(--text-secondary)]">
+          New accounts must be invited from Branch settings so they create their own password.
+          This form only assigns an existing account.
+        </p>
         <Field label="First name">
           <Input required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         </Field>
@@ -156,14 +159,9 @@ export default function RestaurantStaffPage() {
         </Field>
         <div className="sm:col-span-2">
           <Button type="submit" disabled={invite.isPending}>
-            {invite.isPending ? "Inviting…" : "Invite"}
+            {invite.isPending ? "Assigning…" : "Assign existing user"}
           </Button>
         </div>
-        {tempPassword ? (
-          <p className="sm:col-span-2 text-sm text-[var(--text-secondary)]">
-            Temporary password: <strong>{tempPassword}</strong>
-          </p>
-        ) : null}
       </form>
     </AdminShell>
   );

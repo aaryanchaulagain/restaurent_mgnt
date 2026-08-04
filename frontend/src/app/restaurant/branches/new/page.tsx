@@ -7,12 +7,13 @@ import { AdminShell } from "@/components/layout/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { ApiError } from "@/lib/api/client";
 import { businessBranchApi } from "@/features/business/api/business-branch-api";
 import { setBranchDashboardContext } from "@/features/business/lib/branch-context";
 
 function NewBranchForm() {
+  const { items: navItems, portalLabel: shellPortalLabel } = useRestaurantShell();
   const router = useRouter();
   const params = useSearchParams();
   const { push } = useToast();
@@ -97,8 +98,8 @@ function NewBranchForm() {
   return (
     <AdminShell
       brand={brand}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      portalLabel={shellPortalLabel}
+      items={navItems}
       title="Add branch"
       subtitle="Creates a draft location and linked operational restaurant"
     >

@@ -38,10 +38,24 @@ export type BusinessDto = {
   branches_count?: number;
 };
 
+export type BranchAuthorizationDto = {
+  business: {
+    public_id: string | null;
+    business_type: string;
+  };
+  branch: {
+    public_id: string;
+    name: string;
+  };
+  role: string | null;
+  permissions: string[];
+};
+
 export type BranchContextResponse = {
   can_aggregate: boolean;
   businesses: BusinessDto[];
   branches: BranchDto[];
+  authorization?: BranchAuthorizationDto | null;
 };
 
 export type BranchListResponse = {
@@ -80,7 +94,16 @@ export const INVITATION_ERROR_MESSAGES: Record<string, string> = {
   BRANCH_STAFF_ASSIGNMENT_EXISTS: "This person is already assigned to the branch.",
   BRANCH_MANAGER_ACCESS_DENIED: "Branch manager access denied.",
   BRANCH_BUSINESS_MISMATCH: "Branch does not belong to this business.",
-  LAST_BRANCH_MANAGER_REQUIRED: "Cannot remove the last branch manager.",
+  BRANCH_INVITATION_REQUIRED: "New staff must be invited so they can create their own password.",
+  MODULE_PERMISSION_DENIED: "You do not have permission for this action.",
+  FINANCE_PERMISSION_DENIED: "You do not have finance permission for this branch.",
+  ORDER_PERMISSION_DENIED: "You do not have order permission for this branch.",
+  INVENTORY_PERMISSION_DENIED: "You do not have inventory permission for this branch.",
+  STAFF_ROLE_PERMISSION_DENIED: "You cannot manage staff for this branch.",
+  DELIVERY_PERMISSION_DENIED: "You do not have delivery permission for this branch.",
+  BRANCH_ACCESS_DENIED: "Branch access denied.",
+  BRANCH_CONTEXT_REQUIRED: "Select a branch to continue.",
+  BRANCH_RESTAURANT_MISMATCH: "Branch and restaurant context do not match.",
 };
 
 export function invitationErrorMessage(err: { code?: string | null; message: string }): string {

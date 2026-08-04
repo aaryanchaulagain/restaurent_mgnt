@@ -8,12 +8,13 @@ import { Badge, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { ApiError } from "@/lib/api/client";
 import { businessBranchApi, invitationErrorMessage } from "@/features/business/api/business-branch-api";
 import { setBranchDashboardContext } from "@/features/business/lib/branch-context";
 
 export default function BranchSettingsPage() {
+  const { items: navItems, portalLabel: shellPortalLabel } = useRestaurantShell();
   const params = useParams<{ business: string; branch: string }>();
   const businessPublicId = params.business;
   const branchPublicId = params.branch;
@@ -191,8 +192,8 @@ export default function BranchSettingsPage() {
   return (
     <AdminShell
       brand={branch?.business_name ?? "Business"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      portalLabel={shellPortalLabel}
+      items={navItems}
       title={branch?.name ?? "Branch settings"}
       subtitle="General, status, and staff for this location"
       actions={

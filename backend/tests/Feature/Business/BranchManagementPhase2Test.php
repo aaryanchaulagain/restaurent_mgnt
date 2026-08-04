@@ -138,7 +138,8 @@ class BranchManagementPhase2Test extends TestCase
 
         $this->withHeader('X-Branch-Id', $otherBranch->public_id)
             ->getJson('/api/v1/restaurant/ping')
-            ->assertNotFound();
+            ->assertForbidden()
+            ->assertJsonPath('code', 'BRANCH_ACCESS_DENIED');
 
         $this->withHeaders([
             'X-Branch-Id' => $branch->public_id,
@@ -195,13 +196,22 @@ class BranchManagementPhase2Test extends TestCase
         [$owner, , $branch] = $this->ownerWithBusiness('sync');
         Sanctum::actingAs($owner);
 
-        $response = $this->postJson("/api/v1/businesses/{$branch->business->public_id}/branches/{$branch->public_id}/users", [
+        $existing = User::factory()->create([
             'first_name' => 'Kit',
             'last_name' => 'Chen',
             'email' => 'kitchen@example.com',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->postJson("/api/v1/businesses/{$branch->business->public_id}/branches/{$branch->public_id}/users", [
+            'first_name' => 'Kit',
+            'last_name' => 'Chen',
+            'email' => $existing->email,
             'role' => BusinessRoles::KITCHEN_STAFF,
-            'password' => 'Password1!',
         ])->assertCreated();
+
+        $this->assertArrayNotHasKey('temporary_password', $response->json('data') ?? []);
 
         $userId = $response->json('data.user.id');
         $this->assertDatabaseHas('restaurant_users', [

@@ -5,11 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { businessBranchApi } from "@/features/business/api/business-branch-api";
 import { setBranchDashboardContext } from "@/features/business/lib/branch-context";
 
 export default function BranchesPage() {
+  const { items: navItems, portalLabel: shellPortalLabel } = useRestaurantShell();
   const context = useQuery({
     queryKey: ["business-branch-context"],
     queryFn: async () => (await businessBranchApi.context()).data,
@@ -23,8 +24,8 @@ export default function BranchesPage() {
   return (
     <AdminShell
       brand={primaryBusiness?.name ?? "Business"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      portalLabel={shellPortalLabel}
+      items={navItems}
       title="Branches"
       subtitle="Locations for this business"
       actions={

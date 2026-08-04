@@ -11,8 +11,7 @@ import {
   restaurantMenuAdminApi,
   restaurantOffersApi,
 } from "@/features/restaurant/api/restaurant-admin-api";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { ApiError } from "@/lib/api/client";
 import { formatCents } from "@/lib/utils";
 
@@ -33,7 +32,7 @@ type Offer = {
 type TargetInput = { target_type: string; target_id: number; label?: string };
 
 export default function RestaurantOffersPage() {
-  const profile = useRestaurantProfile();
+  const { profile, brand, portalLabel, items: navItems } = useRestaurantShell();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Offer | null>(null);
@@ -187,9 +186,9 @@ export default function RestaurantOffersPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Offers"
       subtitle="Restaurant-funded promotions and discounts"
       actions={<Button size="sm" onClick={() => { setCreateOpen(true); resetForm(); }}>Create offer</Button>}

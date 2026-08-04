@@ -111,7 +111,7 @@ class EnsureRestaurantAccess
         }
 
         if (! $user->isSuperAdmin() && ! $user->canAccessBranch($branch->id)) {
-            return ApiResponse::error('Branch access denied.', 404, code: 'BRANCH_ACCESS_DENIED');
+            return ApiResponse::error('Branch access denied.', 403, code: 'BRANCH_ACCESS_DENIED');
         }
 
         if ($businessHeader) {
@@ -173,7 +173,7 @@ class EnsureRestaurantAccess
         $hasBranch = $restaurant->branch_id && $user->canAccessBranch((int) $restaurant->branch_id);
 
         if (! $hasLegacy && ! $hasBranch) {
-            return ApiResponse::error('Branch access denied.', 404, code: 'BRANCH_ACCESS_DENIED');
+            return ApiResponse::error('Branch access denied.', 403, code: 'BRANCH_ACCESS_DENIED');
         }
 
         if ($restaurant->branch_id) {

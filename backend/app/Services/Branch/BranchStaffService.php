@@ -15,7 +15,6 @@ use App\Services\Business\LegacyRestaurantRoleSynchronizer;
 use App\Support\BusinessRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class BranchStaffService
@@ -298,6 +297,12 @@ class BranchStaffService
             ->value('role');
 
         if (in_array($businessRole, BusinessRoles::businessManagers(), true)) {
+            // Business admins cannot create another business owner via branch assign.
+            if ($businessRole === BusinessRoles::BUSINESS_ADMIN
+                && in_array($role, [BusinessRoles::BUSINESS_OWNER, BusinessRoles::BUSINESS_ADMIN], true)) {
+                throw ValidationException::withMessages(['role' => ['Not allowed to assign this role.']]);
+            }
+
             return;
         }
 
@@ -307,6 +312,7 @@ class BranchStaffService
             ->where('status', 'active')
             ->value('role');
 
+        // Branch managers may assign operational roles only — never another branch manager.
         if ($branchRole === BusinessRoles::BRANCH_MANAGER
             && in_array($role, BusinessRoles::branchManagerAssignable(), true)) {
             return;
@@ -345,34 +351,28 @@ class BranchStaffService
     }
 
     /**
+     * Resolve an existing user for direct assignment.
+     * New accounts must be created through BranchInvitationService — never via temporary passwords.
+     *
      * @param  array{first_name?: string, last_name?: string, email: string, password?: string|null, phone?: string|null}  $data
-     * @return array{0: User, 1: string|null}
+     * @return array{0: User, 1: null}
      */
     private function resolveUser(array $data): array
     {
         $email = strtolower(trim($data['email']));
         $existing = User::query()->where('email', $email)->first();
-        $temporaryPassword = null;
 
         if ($existing) {
             if ($existing->isSuperAdmin()) {
                 throw ValidationException::withMessages(['email' => ['Cannot assign portal roles to a super admin.']]);
             }
 
+            // Caller-selected passwords are ignored for existing accounts.
             return [$existing, null];
         }
 
-        $temporaryPassword = $data['password'] ?? Str::password(12);
-        $user = User::query()->create([
-            'first_name' => $data['first_name'] ?? 'Staff',
-            'last_name' => $data['last_name'] ?? 'Member',
-            'email' => $email,
-            'phone' => $data['phone'] ?? null,
-            'password' => $temporaryPassword,
-            'status' => 'active',
-            'email_verified_at' => now(),
+        throw ValidationException::withMessages([
+            'email' => ['New staff must be onboarded with a secure invitation. They will create their own password.'],
         ]);
-
-        return [$user, $temporaryPassword];
     }
 }

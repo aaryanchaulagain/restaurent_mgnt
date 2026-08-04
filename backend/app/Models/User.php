@@ -211,7 +211,7 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('status', 'active')
             ->value('role');
 
-        if (in_array($businessRole, BusinessRoles::businessManagers(), true)) {
+        if (in_array($businessRole, array_merge(BusinessRoles::businessManagers(), [BusinessRoles::ACCOUNTANT]), true)) {
             return true;
         }
 

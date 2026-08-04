@@ -3,20 +3,19 @@
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FileUpload, Input, Switch, Textarea } from "@/components/ui/forms";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { useState } from "react";
 
 export default function RestaurantSettingsPage() {
-  const profile = useRestaurantProfile();
+  const { profile, brand, portalLabel, items: navItems } = useRestaurantShell();
   const [delivery, setDelivery] = useState(true);
   const [pickup, setPickup] = useState(true);
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Settings"
       subtitle="Profile, hours and fulfilment preferences"
       actions={<Button>Save changes</Button>}

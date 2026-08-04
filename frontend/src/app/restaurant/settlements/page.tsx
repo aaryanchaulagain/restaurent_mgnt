@@ -3,18 +3,17 @@
 import { AdminShell } from "@/components/layout/admin-shell";
 import { StatCard } from "@/components/marketplace/cards";
 import { EmptyState } from "@/components/ui/feedback";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { formatCents } from "@/lib/utils";
 
 export default function RestaurantSettlementsPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Settlements"
       subtitle="Weekly settlement statements and payout status"
     >

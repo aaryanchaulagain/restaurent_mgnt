@@ -99,7 +99,8 @@ class AdminRestaurantProvisionTest extends TestCase
 
         $this->withHeader('X-Restaurant-Id', $b->fresh()->public_id)
             ->getJson('/api/v1/restaurant/ping')
-            ->assertNotFound();
+            ->assertForbidden()
+            ->assertJsonPath('code', 'BRANCH_ACCESS_DENIED');
 
         $this->withHeader('X-Restaurant-Id', $a->fresh()->public_id)
             ->getJson('/api/v1/restaurant/ping')
@@ -136,13 +137,31 @@ class AdminRestaurantProvisionTest extends TestCase
             'email' => 'new-staff@example.com',
             'role' => 'restaurant_staff',
             'password' => 'Password1!',
+        ])->assertStatus(422)
+            ->assertJsonPath('code', 'BRANCH_INVITATION_REQUIRED');
+
+        $existing = User::factory()->create([
+            'first_name' => 'New',
+            'last_name' => 'Staff',
+            'email' => 'existing-staff@example.com',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+
+        $invite = $this->postJson('/api/v1/restaurant/staff', [
+            'first_name' => 'New',
+            'last_name' => 'Staff',
+            'email' => $existing->email,
+            'role' => 'restaurant_staff',
         ])->assertCreated();
+
+        $this->assertArrayNotHasKey('temporary_password', $invite->json('data') ?? []);
 
         $staffId = $invite->json('data.member.user_id');
 
         $this->getJson('/api/v1/restaurant/staff')
             ->assertOk()
-            ->assertJsonFragment(['email' => 'new-staff@example.com']);
+            ->assertJsonFragment(['email' => 'existing-staff@example.com']);
 
         $this->deleteJson("/api/v1/restaurant/staff/{$staffId}")->assertOk();
 

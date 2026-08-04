@@ -44,6 +44,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'mfa' => EnsureMfaSatisfied::class,
             'restaurant.access' => EnsureRestaurantAccess::class,
         ]);
+
+        // Tenant context must bind before module permission checks.
+        $middleware->priority([
+            \Illuminate\Auth\Middleware\Authenticate::class,
+            EnsureRole::class,
+            EnsureRestaurantAccess::class,
+            EnsurePermission::class,
+        ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('orders:expire-unaccepted')->everyMinute();
@@ -77,6 +85,14 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($e instanceof \App\Exceptions\BranchInvitationException) {
+                return ApiResponse::error(
+                    message: $e->getMessage(),
+                    status: $e->httpStatus,
+                    code: $e->errorCode,
+                );
+            }
+
+            if ($e instanceof \App\Exceptions\ModulePermissionException) {
                 return ApiResponse::error(
                     message: $e->getMessage(),
                     status: $e->httpStatus,

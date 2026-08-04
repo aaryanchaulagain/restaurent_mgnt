@@ -14,6 +14,7 @@ use App\Models\BranchUser;
 use App\Models\Business;
 use App\Models\BusinessUser;
 use App\Services\Branch\BranchInvitationService;
+use App\Services\Branch\BranchPermissionService;
 use App\Services\Branch\BranchProvisionService;
 use App\Services\Branch\BranchStaffService;
 use App\Services\Branch\BranchStatusService;
@@ -31,6 +32,7 @@ class BusinessBranchController extends Controller
         private readonly BranchStatusService $statuses,
         private readonly BranchStaffService $staff,
         private readonly BranchInvitationService $invitations,
+        private readonly BranchPermissionService $permissions,
     ) {}
 
     public function listBusinesses(Request $request)
@@ -92,10 +94,23 @@ class BusinessBranchController extends Controller
 
         $canAggregate = $user->isSuperAdmin() || $this->isBusinessManagerAnywhere($user);
 
+        $authorization = null;
+        $branchHeader = $request->header('X-Branch-Id');
+        if ($branchHeader) {
+            $activeBranch = $branches->firstWhere('public_id', $branchHeader)
+                ?? Branch::query()->where('public_id', $branchHeader)->first();
+            if ($activeBranch && ($user->isSuperAdmin() || $user->canAccessBranch($activeBranch->id))) {
+                $authorization = $this->authorizationPayload($user, $activeBranch);
+            }
+        } elseif ($branches->count() === 1) {
+            $authorization = $this->authorizationPayload($user, $branches->first());
+        }
+
         return ApiResponse::success([
             'can_aggregate' => $canAggregate,
             'businesses' => BusinessResource::collection($businesses),
             'branches' => BranchResource::collection($branches),
+            'authorization' => $authorization,
         ]);
     }
 
@@ -260,11 +275,19 @@ class BusinessBranchController extends Controller
             'last_name' => ['nullable', 'string', 'max:80'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', Rule::in(BusinessRoles::businessAssignable())],
         ]);
 
-        $result = $this->staff->assignBusinessUser($business, $data, $request->user(), $request);
+        try {
+            $result = $this->staff->assignBusinessUser($business, $data, $request->user(), $request);
+        } catch (ValidationException $e) {
+            return ApiResponse::error(
+                $e->getMessage() ?: 'Unable to assign staff.',
+                422,
+                $e->errors(),
+                code: 'BRANCH_INVITATION_REQUIRED',
+            );
+        }
 
         return ApiResponse::success([
             'user' => [
@@ -273,8 +296,7 @@ class BusinessBranchController extends Controller
                 'name' => $result['user']->name,
                 'role' => $result['assignment']->role,
             ],
-            'temporary_password' => $result['temporary_password'],
-        ], message: 'Business user assigned.', status: 201);
+        ], message: 'Existing user assigned. New users must be invited.', status: 201);
     }
 
     public function destroyBusinessUser(Request $request, Business $business, int $userId)
@@ -326,11 +348,19 @@ class BusinessBranchController extends Controller
             'last_name' => ['nullable', 'string', 'max:80'],
             'email' => ['required', 'email', 'max:190'],
             'phone' => ['nullable', 'string', 'max:40'],
-            'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', Rule::in(BusinessRoles::branchLevel())],
         ]);
 
-        $result = $this->staff->assign($branch, $data, $request->user(), $request);
+        try {
+            $result = $this->staff->assign($branch, $data, $request->user(), $request);
+        } catch (ValidationException $e) {
+            return ApiResponse::error(
+                $e->getMessage() ?: 'Unable to assign staff.',
+                422,
+                $e->errors(),
+                code: 'BRANCH_INVITATION_REQUIRED',
+            );
+        }
 
         return ApiResponse::success([
             'user' => [
@@ -339,8 +369,7 @@ class BusinessBranchController extends Controller
                 'name' => $result['user']->name,
                 'role' => $result['assignment']->role,
             ],
-            'temporary_password' => $result['temporary_password'],
-        ], message: 'Branch staff assigned.', status: 201);
+        ], message: 'Existing user assigned to branch. New users must be invited.', status: 201);
     }
 
     public function updateBranchUser(Request $request, Business $business, Branch $branch, int $userId)
@@ -442,5 +471,26 @@ class BusinessBranchController extends Controller
             ->where('status', 'active')
             ->whereIn('role', BusinessRoles::businessManagers())
             ->exists();
+    }
+
+    /**
+     * @return array{business: array{public_id: string, business_type: string}, branch: array{public_id: string, name: string}, role: string|null, permissions: list<string>}
+     */
+    private function authorizationPayload($user, Branch $branch): array
+    {
+        $branch->loadMissing('business');
+
+        return [
+            'business' => [
+                'public_id' => $branch->business?->public_id,
+                'business_type' => $branch->business?->business_type ?? 'restaurant',
+            ],
+            'branch' => [
+                'public_id' => $branch->public_id,
+                'name' => $branch->name,
+            ],
+            'role' => $this->permissions->roleFor($user, $branch),
+            'permissions' => $this->permissions->permissionsFor($user, $branch),
+        ];
     }
 }

@@ -9,9 +9,7 @@ use App\Services\Restaurant\RestaurantMembershipService;
 use App\Support\ApiResponse;
 use App\Support\RestaurantContext;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class RestaurantStaffController extends Controller
 {
@@ -50,28 +48,23 @@ class RestaurantStaffController extends Controller
             'first_name' => ['required', 'string', 'max:80'],
             'last_name' => ['required', 'string', 'max:80'],
             'email' => ['required', 'email', 'max:190'],
-            'password' => ['nullable', 'string', Password::min(8)->mixedCase()->numbers()],
             'phone' => ['nullable', 'string', 'max:40'],
             'role' => ['required', Rule::in(['restaurant_manager', 'restaurant_staff'])],
         ]);
 
-        // Owners cannot escalate someone to owner via staff UI — use admin for owners.
+        // New accounts must use branch invitations — never accept or return temporary passwords.
         $email = strtolower(trim($data['email']));
-        $temporaryPassword = null;
         $user = User::query()->where('email', $email)->first();
 
         if (! $user) {
-            $temporaryPassword = $data['password'] ?? Str::password(12);
-            $user = User::query()->create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $email,
-                'phone' => $data['phone'] ?? null,
-                'password' => $temporaryPassword,
-                'status' => 'active',
-                'email_verified_at' => now(),
-            ]);
-        } elseif ($user->isSuperAdmin()) {
+            return ApiResponse::error(
+                'New staff must be onboarded with a secure invitation. They will create their own password.',
+                422,
+                code: 'BRANCH_INVITATION_REQUIRED',
+            );
+        }
+
+        if ($user->isSuperAdmin()) {
             return ApiResponse::error('Cannot assign restaurant staff roles to a super admin.', 422);
         }
 
@@ -91,7 +84,6 @@ class RestaurantStaffController extends Controller
                 'role' => $membership->role?->slug ?? $data['role'],
                 'status' => $membership->status,
             ],
-            'temporary_password' => $temporaryPassword,
         ], message: 'Staff member added.', status: 201);
     }
 

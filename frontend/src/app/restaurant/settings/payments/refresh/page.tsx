@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/feedback";
-import { restaurantNav } from "@/lib/admin-nav";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { restaurantPaymentAccountApi } from "@/features/payments/api/payment-api";
 import { ApiError } from "@/lib/api/client";
 import { paymentErrorMessage } from "@/features/payments/utils/payment-errors";
 
 export default function RestaurantPaymentsRefreshPage() {
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -36,9 +35,9 @@ export default function RestaurantPaymentsRefreshPage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Continue Stripe onboarding"
       subtitle="Regenerating a secure onboarding link"
     >

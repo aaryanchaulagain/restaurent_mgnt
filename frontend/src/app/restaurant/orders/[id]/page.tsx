@@ -10,13 +10,12 @@ import { useToast } from "@/components/ui/navigation";
 import { restaurantOrderApi } from "@/features/orders/api/order-api";
 import { OrderStatusBadge } from "@/features/orders/components/order-status-badge";
 import { OrderStatusTimeline } from "@/features/orders/components/order-status-timeline";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { formatCents } from "@/lib/utils";
 
 export default function RestaurantOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const profile = useRestaurantProfile();
+  const { brand, portalLabel, items: navItems } = useRestaurantShell();
   const qc = useQueryClient();
   const { push } = useToast();
 
@@ -48,9 +47,9 @@ export default function RestaurantOrderDetailPage({ params }: { params: Promise<
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title={o ? `Order ${o.order_number}` : "Order"}
       subtitle={o ? `${o.fulfilment_type} · ${o.payment_method}` : ""}
       actions={<Link href="/restaurant/orders"><Button variant="outline">Back to orders</Button></Link>}

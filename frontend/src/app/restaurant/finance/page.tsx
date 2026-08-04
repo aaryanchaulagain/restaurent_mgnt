@@ -5,15 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { AdminShell } from "@/components/layout/admin-shell";
 import { StatCard } from "@/components/marketplace/cards";
 import { Badge, EmptyState, Skeleton } from "@/components/ui/feedback";
-import { restaurantNav } from "@/lib/admin-nav";
 import { formatCents } from "@/lib/utils";
-import { useRestaurantProfile } from "@/features/restaurant/hooks/use-restaurant-profile";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import { restaurantOrderApi } from "@/features/orders/api/order-api";
 import { restaurantPaymentAccountApi } from "@/features/payments/api/payment-api";
 import { ownershipLabel, revenueOwnershipWording } from "@/features/payments/utils/ownership-label";
 
 export default function RestaurantFinancePage() {
-  const profile = useRestaurantProfile();
+  const { profile, brand, portalLabel, items: navItems } = useRestaurantShell();
 
   const accountQuery = useQuery({
     queryKey: ["restaurant", "payment-account"],
@@ -40,9 +39,9 @@ export default function RestaurantFinancePage() {
 
   return (
     <AdminShell
-      brand={profile.data?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      brand={brand}
+      portalLabel={portalLabel}
+      items={navItems}
       title="Finance"
       subtitle="Order payment summaries — not bank payouts"
     >

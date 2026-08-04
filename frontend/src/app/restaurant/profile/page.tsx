@@ -4,7 +4,7 @@ import { AdminShell } from "@/components/layout/admin-shell";
 import { Badge, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/forms";
-import { restaurantNav } from "@/lib/admin-nav";
+import { useRestaurantShell } from "@/features/restaurant/hooks/use-restaurant-shell";
 import {
   useActivateRestaurant,
   useRestaurantChecklist,
@@ -13,6 +13,7 @@ import {
 } from "@/features/restaurant/hooks/use-restaurant-profile";
 
 export default function RestaurantProfilePage() {
+  const { items: navItems, brand: shellBrand, portalLabel: shellPortalLabel } = useRestaurantShell();
   const profile = useRestaurantProfile();
   const checklist = useRestaurantChecklist();
   const update = useUpdateRestaurantProfile();
@@ -20,7 +21,7 @@ export default function RestaurantProfilePage() {
 
   if (profile.isLoading) {
     return (
-      <AdminShell brand="Restaurant" portalLabel="Restaurant Admin" items={restaurantNav} title="Restaurant profile">
+      <AdminShell brand={shellBrand} portalLabel={shellPortalLabel} items={navItems} title="Restaurant profile">
         <Skeleton className="h-8 w-48" />
       </AdminShell>
     );
@@ -31,8 +32,8 @@ export default function RestaurantProfilePage() {
   return (
     <AdminShell
       brand={p?.trading_name ?? "Restaurant"}
-      portalLabel="Restaurant Admin"
-      items={restaurantNav}
+      portalLabel={shellPortalLabel}
+      items={navItems}
       title="Restaurant profile"
       subtitle="Public identity shown on Khana marketplace pages"
       actions={

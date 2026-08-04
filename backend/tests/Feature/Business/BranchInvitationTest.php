@@ -373,7 +373,8 @@ class BranchInvitationTest extends TestCase
 
         $this->getJson('/api/v1/restaurant/ping', [
             'X-Branch-Id' => $branchB->public_id,
-        ])->assertStatus(404);
+        ])->assertForbidden()
+            ->assertJsonPath('code', 'BRANCH_ACCESS_DENIED');
     }
 
     private function clearAuth(): void

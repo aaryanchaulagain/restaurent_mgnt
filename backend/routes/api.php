@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Restaurant\RestaurantPaymentController;
 use App\Http\Controllers\Api\Restaurant\RestaurantProfileController;
 use App\Http\Controllers\Api\Restaurant\RestaurantServiceAreaController;
 use App\Http\Controllers\Api\Restaurant\RestaurantStaffController;
+use App\Http\Controllers\Api\Restaurant\RestaurantAuthorizationController;
 use App\Http\Controllers\Api\Webhooks\StripeWebhookController;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureEmailIsVerified;
@@ -314,6 +315,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
         EnsureRestaurantAccess::class,
     ];
 
+    Route::get('/restaurant/authorization', [RestaurantAuthorizationController::class, 'show'])
+        ->middleware($restaurantPortal);
+
     Route::prefix('restaurant/profile')->middleware($restaurantPortal)->group(function (): void {
         Route::get('/', [RestaurantProfileController::class, 'show'])
             ->middleware(EnsurePermission::class.':view_restaurant_profile');
@@ -422,17 +426,25 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
             ->middleware(EnsurePermission::class.':request_restaurant_refund');
     });
 
-    Route::prefix('restaurant/payment-account')->middleware($restaurantPortal)->middleware(EnsurePermission::class.':manage_payment_accounts')->group(function (): void {
-        Route::get('/', [RestaurantPaymentAccountController::class, 'show']);
-        Route::post('/', [RestaurantPaymentAccountController::class, 'store']);
-        Route::post('/onboarding-link', [RestaurantPaymentAccountController::class, 'onboardingLink']);
-        Route::post('/refresh', [RestaurantPaymentAccountController::class, 'refresh']);
+    Route::prefix('restaurant/payment-account')->middleware($restaurantPortal)->group(function (): void {
+        Route::get('/', [RestaurantPaymentAccountController::class, 'show'])
+            ->middleware(EnsurePermission::class.':manage_payment_accounts');
+        Route::post('/', [RestaurantPaymentAccountController::class, 'store'])
+            ->middleware(EnsurePermission::class.':manage_payment_accounts');
+        Route::post('/onboarding-link', [RestaurantPaymentAccountController::class, 'onboardingLink'])
+            ->middleware(EnsurePermission::class.':manage_payment_accounts');
+        Route::post('/refresh', [RestaurantPaymentAccountController::class, 'refresh'])
+            ->middleware(EnsurePermission::class.':manage_payment_accounts');
     });
 
-    Route::prefix('restaurant/staff')->middleware($restaurantPortal)->middleware(EnsurePermission::class.':manage_restaurant_staff')->group(function (): void {
-        Route::get('/', [RestaurantStaffController::class, 'index']);
-        Route::post('/', [RestaurantStaffController::class, 'store']);
-        Route::patch('/{userId}', [RestaurantStaffController::class, 'update']);
-        Route::delete('/{userId}', [RestaurantStaffController::class, 'destroy']);
+    Route::prefix('restaurant/staff')->middleware($restaurantPortal)->group(function (): void {
+        Route::get('/', [RestaurantStaffController::class, 'index'])
+            ->middleware(EnsurePermission::class.':manage_restaurant_staff');
+        Route::post('/', [RestaurantStaffController::class, 'store'])
+            ->middleware(EnsurePermission::class.':manage_restaurant_staff');
+        Route::patch('/{userId}', [RestaurantStaffController::class, 'update'])
+            ->middleware(EnsurePermission::class.':manage_restaurant_staff');
+        Route::delete('/{userId}', [RestaurantStaffController::class, 'destroy'])
+            ->middleware(EnsurePermission::class.':manage_restaurant_staff');
     });
 });
