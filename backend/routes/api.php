@@ -55,6 +55,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/platform-restaurant', [PublicRestaurantController::class, 'platformRestaurant']);
     });
 
+    Route::get('/branch-invitations/{token}', [\App\Http\Controllers\Api\Public\PublicBranchInvitationController::class, 'show'])
+        ->middleware('throttle:30,1');
+    Route::post('/branch-invitations/{token}/accept', [\App\Http\Controllers\Api\Public\PublicBranchInvitationController::class, 'accept'])
+        ->middleware('throttle:20,1');
+
     Route::prefix('cart')->middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class])->group(function (): void {
         Route::get('/', [CartController::class, 'show']);
         Route::post('/items', [CartController::class, 'storeItem']);
@@ -297,6 +302,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', EnsureAccountIsActive::class, E
         Route::post('/{business}/branches/{branch}/users', [BusinessBranchController::class, 'storeBranchUser']);
         Route::patch('/{business}/branches/{branch}/users/{userId}', [BusinessBranchController::class, 'updateBranchUser']);
         Route::delete('/{business}/branches/{branch}/users/{userId}', [BusinessBranchController::class, 'destroyBranchUser']);
+
+        Route::get('/{business}/branches/{branch}/invitations', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'index']);
+        Route::post('/{business}/branches/{branch}/invitations', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'store']);
+        Route::post('/{business}/branches/{branch}/invitations/{invitation}/resend', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'resend']);
+        Route::post('/{business}/branches/{branch}/invitations/{invitation}/revoke', [\App\Http\Controllers\Api\Business\BranchInvitationController::class, 'revoke']);
     });
 
     $restaurantPortal = [

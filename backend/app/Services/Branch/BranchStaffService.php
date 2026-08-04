@@ -111,6 +111,21 @@ class BranchStaffService
                 return;
             }
 
+            if ($assignment->role === BusinessRoles::BRANCH_MANAGER) {
+                $managerCount = BranchUser::query()
+                    ->where('branch_id', $branch->id)
+                    ->where('status', 'active')
+                    ->where('role', BusinessRoles::BRANCH_MANAGER)
+                    ->count();
+                if ($managerCount <= 1) {
+                    throw new \App\Exceptions\BranchInvitationException(
+                        'LAST_BRANCH_MANAGER_REQUIRED',
+                        'Cannot remove the last branch manager.',
+                        422,
+                    );
+                }
+            }
+
             $assignment->forceFill(['status' => 'removed'])->save();
 
             $this->legacySync->removeBranchAssignment($branch, $user, $actor, $request);

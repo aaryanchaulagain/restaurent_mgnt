@@ -50,6 +50,11 @@ class CheckoutQuoteTest extends TestCase
 
     public function test_third_party_delivery_rejected(): void
     {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $role = Role::query()->where('slug', 'customer')->firstOrFail();
+        $user->roles()->attach($role->id);
+        Sanctum::actingAs($user);
+
         [, $item] = $this->liveMenu();
         $this->postJson('/api/v1/cart/items', [
             'menu_item_public_id' => $item->public_id,
@@ -63,6 +68,11 @@ class CheckoutQuoteTest extends TestCase
 
     public function test_unsupported_postcode_rejected_for_delivery(): void
     {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $role = Role::query()->where('slug', 'customer')->firstOrFail();
+        $user->roles()->attach($role->id);
+        Sanctum::actingAs($user);
+
         [, $item] = $this->liveMenu('delivery-quote');
         $restaurant = Restaurant::query()->where('slug', 'delivery-quote')->firstOrFail();
         RestaurantServiceArea::query()->create([

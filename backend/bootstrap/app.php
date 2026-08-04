@@ -76,6 +76,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 );
             }
 
+            if ($e instanceof \App\Exceptions\BranchInvitationException) {
+                return ApiResponse::error(
+                    message: $e->getMessage(),
+                    status: $e->httpStatus,
+                    code: $e->errorCode,
+                );
+            }
+
             if ($e instanceof PaymentException) {
                 return ApiResponse::error(
                     message: $e->getMessage() ?: PaymentErrorResponse::messageForCode($e->errorCode),

@@ -50,6 +50,46 @@ export type BranchListResponse = {
   counts: Record<string, number>;
 };
 
+export type BranchInvitationDto = {
+  public_id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  role: string;
+  status: string;
+  expires_at: string | null;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  resend_count: number;
+  last_resent_at: string | null;
+  created_at?: string | null;
+};
+
+export const INVITATION_ERROR_MESSAGES: Record<string, string> = {
+  BRANCH_INVITATION_ACCESS_DENIED: "You are not allowed to manage invitations for this branch.",
+  BRANCH_INVITATION_NOT_FOUND: "Invitation not found.",
+  BRANCH_INVITATION_ALREADY_EXISTS: "A pending invitation already exists for this email and role.",
+  BRANCH_INVITATION_ALREADY_ACCEPTED: "This invitation has already been accepted.",
+  BRANCH_INVITATION_EXPIRED: "This invitation has expired.",
+  BRANCH_INVITATION_REVOKED: "This invitation has been revoked.",
+  BRANCH_INVITATION_TOKEN_INVALID: "This invitation link is invalid.",
+  BRANCH_INVITATION_EMAIL_MISMATCH: "Sign in with the invited email address to continue.",
+  BRANCH_INVITATION_BRANCH_UNAVAILABLE: "This branch is not available for staff onboarding.",
+  BRANCH_INVITATION_ROLE_INVALID: "That invitation role is not allowed.",
+  BRANCH_INVITATION_RESEND_LIMITED: "Please wait before resending this invitation.",
+  BRANCH_STAFF_ASSIGNMENT_EXISTS: "This person is already assigned to the branch.",
+  BRANCH_MANAGER_ACCESS_DENIED: "Branch manager access denied.",
+  BRANCH_BUSINESS_MISMATCH: "Branch does not belong to this business.",
+  LAST_BRANCH_MANAGER_REQUIRED: "Cannot remove the last branch manager.",
+};
+
+export function invitationErrorMessage(err: { code?: string | null; message: string }): string {
+  if (err.code && INVITATION_ERROR_MESSAGES[err.code]) {
+    return INVITATION_ERROR_MESSAGES[err.code];
+  }
+  return err.message;
+}
+
 export const businessBranchApi = {
   context: () =>
     apiRequest<BranchContextResponse>("/api/v1/businesses/context"),
@@ -63,10 +103,11 @@ export const businessBranchApi = {
     ),
 
   createBranch: (businessPublicId: string, body: Record<string, unknown>) =>
-    apiRequest<{ branch: BranchDto; restaurant_public_id: string }>(
-      `/api/v1/businesses/${businessPublicId}/branches`,
-      { method: "POST", body },
-    ),
+    apiRequest<{
+      branch: BranchDto;
+      restaurant_public_id: string;
+      invitation?: BranchInvitationDto | null;
+    }>(`/api/v1/businesses/${businessPublicId}/branches`, { method: "POST", body }),
 
   updateBranch: (
     businessPublicId: string,
@@ -121,5 +162,69 @@ export const businessBranchApi = {
   ) =>
     apiRequest(`/api/v1/businesses/${businessPublicId}/branches/${branchPublicId}/users/${userId}`, {
       method: "DELETE",
+    }),
+
+  listBranchInvitations: (businessPublicId: string, branchPublicId: string) =>
+    apiRequest<{ invitations: BranchInvitationDto[] }>(
+      `/api/v1/businesses/${businessPublicId}/branches/${branchPublicId}/invitations`,
+    ),
+
+  createBranchInvitation: (
+    businessPublicId: string,
+    branchPublicId: string,
+    body: Record<string, unknown>,
+  ) =>
+    apiRequest<{ invitation: BranchInvitationDto }>(
+      `/api/v1/businesses/${businessPublicId}/branches/${branchPublicId}/invitations`,
+      { method: "POST", body },
+    ),
+
+  resendBranchInvitation: (
+    businessPublicId: string,
+    branchPublicId: string,
+    invitationPublicId: string,
+  ) =>
+    apiRequest<{ invitation: BranchInvitationDto }>(
+      `/api/v1/businesses/${businessPublicId}/branches/${branchPublicId}/invitations/${invitationPublicId}/resend`,
+      { method: "POST" },
+    ),
+
+  revokeBranchInvitation: (
+    businessPublicId: string,
+    branchPublicId: string,
+    invitationPublicId: string,
+  ) =>
+    apiRequest<{ invitation: BranchInvitationDto }>(
+      `/api/v1/businesses/${businessPublicId}/branches/${branchPublicId}/invitations/${invitationPublicId}/revoke`,
+      { method: "POST" },
+    ),
+
+  previewBranchInvitation: (token: string) =>
+    apiRequest<{
+      existing_user: boolean;
+      invitation: {
+        public_id: string;
+        email: string;
+        full_name: string | null;
+        role: string;
+        status: string;
+        expires_at: string | null;
+        branch: { public_id: string; name: string };
+        business: { public_id: string; name: string };
+      };
+    }>(`/api/v1/branch-invitations/${encodeURIComponent(token)}`),
+
+  acceptBranchInvitation: (token: string, body: Record<string, unknown>) =>
+    apiRequest<{
+      user: unknown;
+      branch: {
+        public_id: string;
+        name: string;
+        business_public_id?: string;
+        restaurant_public_id?: string | null;
+      };
+    }>(`/api/v1/branch-invitations/${encodeURIComponent(token)}/accept`, {
+      method: "POST",
+      body,
     }),
 };

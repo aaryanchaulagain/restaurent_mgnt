@@ -17,6 +17,12 @@ return [
         'lock_minutes' => (int) env('AUTH_LOCK_MINUTES', 15),
     ],
 
+    'branch_invitations' => [
+        'expire_hours' => (int) env('BRANCH_INVITATION_EXPIRE_HOURS', 48),
+        'resend_cooldown_seconds' => (int) env('BRANCH_INVITATION_RESEND_COOLDOWN', 60),
+        'resend_daily_limit' => (int) env('BRANCH_INVITATION_RESEND_DAILY_LIMIT', 10),
+    ],
+
     'roles' => [
         'customer',
         'restaurant_owner',

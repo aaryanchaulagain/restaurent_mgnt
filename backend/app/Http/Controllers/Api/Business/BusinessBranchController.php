@@ -2,21 +2,25 @@
 
 namespace App\Http\Controllers\Api\Business;
 
+use App\Exceptions\BranchInvitationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Branch\CreateBranchRequest;
 use App\Http\Requests\Branch\UpdateBranchRequest;
+use App\Http\Resources\Business\BranchInvitationResource;
 use App\Http\Resources\Business\BranchResource;
 use App\Http\Resources\Business\BusinessResource;
 use App\Models\Branch;
 use App\Models\BranchUser;
 use App\Models\Business;
 use App\Models\BusinessUser;
+use App\Services\Branch\BranchInvitationService;
 use App\Services\Branch\BranchProvisionService;
 use App\Services\Branch\BranchStaffService;
 use App\Services\Branch\BranchStatusService;
 use App\Support\ApiResponse;
 use App\Support\BusinessRoles;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +30,7 @@ class BusinessBranchController extends Controller
         private readonly BranchProvisionService $provision,
         private readonly BranchStatusService $statuses,
         private readonly BranchStaffService $staff,
+        private readonly BranchInvitationService $invitations,
     ) {}
 
     public function listBusinesses(Request $request)
@@ -140,12 +145,49 @@ class BusinessBranchController extends Controller
     public function store(CreateBranchRequest $request, Business $business)
     {
         $this->authorize('manageBranches', $business);
-        $result = $this->provision->create($business, $request->validated(), $request->user(), $request);
+        $validated = $request->validated();
+        $inviteManager = (bool) ($validated['invite_manager'] ?? false);
+
+        try {
+            $payload = DB::transaction(function () use ($business, $validated, $inviteManager, $request) {
+                $result = $this->provision->create($business, $validated, $request->user(), $request);
+                $invitationPayload = null;
+
+                if ($inviteManager) {
+                    $created = $this->invitations->create($result['branch'], [
+                        'email' => $validated['manager_email'],
+                        'full_name' => $validated['manager_full_name'] ?? null,
+                        'phone' => $validated['manager_phone'] ?? null,
+                        'role' => $validated['manager_role'] ?? BusinessRoles::BRANCH_MANAGER,
+                    ], $request->user(), $request);
+
+                    $this->invitations->dispatchNotification(
+                        $created['invitation'],
+                        $created['plain_token'],
+                    );
+
+                    $invitationPayload = $created['invitation']->fresh(['invitedBy']);
+                }
+
+                return [
+                    'branch' => $result['branch'],
+                    'restaurant' => $result['restaurant'],
+                    'invitation' => $invitationPayload,
+                ];
+            });
+        } catch (BranchInvitationException $e) {
+            return ApiResponse::error($e->getMessage(), $e->httpStatus, code: $e->errorCode);
+        }
 
         return ApiResponse::success([
-            'branch' => new BranchResource($result['branch']->load(['business', 'restaurant'])),
-            'restaurant_public_id' => $result['restaurant']->public_id,
-        ], message: 'Branch created. Configure menus, hours, delivery, and payments before activating.', status: 201);
+            'branch' => new BranchResource($payload['branch']->load(['business', 'restaurant'])),
+            'restaurant_public_id' => $payload['restaurant']->public_id,
+            'invitation' => $payload['invitation']
+                ? new BranchInvitationResource($payload['invitation'])
+                : null,
+        ], message: $payload['invitation']
+            ? 'Branch created. Manager invitation sent.'
+            : 'Branch created. Configure menus, hours, delivery, and payments before activating.', status: 201);
     }
 
     public function show(Request $request, Business $business, Branch $branch)
@@ -329,7 +371,11 @@ class BusinessBranchController extends Controller
         $this->assertBranchBelongs($business, $branch);
         $this->authorize('manageStaff', $branch);
         $user = \App\Models\User::query()->findOrFail($userId);
-        $this->staff->remove($branch, $user, $request->user(), $request);
+        try {
+            $this->staff->remove($branch, $user, $request->user(), $request);
+        } catch (BranchInvitationException $e) {
+            return ApiResponse::error($e->getMessage(), $e->httpStatus, code: $e->errorCode);
+        }
 
         return ApiResponse::success(message: 'Branch staff removed.');
     }

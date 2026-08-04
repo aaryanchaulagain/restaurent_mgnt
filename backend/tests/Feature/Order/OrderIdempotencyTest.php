@@ -208,32 +208,17 @@ class OrderIdempotencyTest extends TestCase
         $this->assertSame(2, Order::query()->count());
     }
 
-    public function test_different_guests_are_isolated(): void
+    public function test_guests_cannot_place_orders(): void
     {
         [, , , $quoteA] = $this->createCheckoutQuote(true);
-        [, , , $quoteB] = $this->createCheckoutQuote(true);
 
-        $first = $this->postJson('/api/v1/orders', [
+        $this->postJson('/api/v1/orders', [
             'checkout_quote_public_id' => $quoteA->public_id,
             'idempotency_key' => 'guest-shared-key',
             'payment_method' => 'cash',
             'customer_name' => 'Guest A',
             'customer_email' => 'guest-a@example.test',
-        ])->assertCreated();
-
-        $second = $this->postJson('/api/v1/orders', [
-            'checkout_quote_public_id' => $quoteB->public_id,
-            'idempotency_key' => 'guest-shared-key',
-            'payment_method' => 'cash',
-            'customer_name' => 'Guest B',
-            'customer_email' => 'guest-b@example.test',
-        ])->assertCreated();
-
-        $this->assertNotSame(
-            $first->json('data.order.order_number'),
-            $second->json('data.order.order_number'),
-        );
-        $this->assertSame(2, Order::query()->count());
+        ])->assertUnauthorized();
     }
 
     public function test_concurrent_identical_requests_create_one_order(): void

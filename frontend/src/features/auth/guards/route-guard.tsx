@@ -232,7 +232,18 @@ export function RestaurantGuard({ children }: { children: ReactNode }) {
 
   return (
     <AuthGuard
-      roles={["restaurant_owner", "restaurant_manager", "restaurant_staff"]}
+      roles={[
+        "restaurant_owner",
+        "restaurant_manager",
+        "restaurant_staff",
+        "business_owner",
+        "business_admin",
+        "branch_manager",
+        "order_manager",
+        "kitchen_staff",
+        "inventory_manager",
+        "delivery_staff",
+      ]}
       permissions={["view_restaurant_dashboard"]}
       requireMfaForAdmin={false}
     >

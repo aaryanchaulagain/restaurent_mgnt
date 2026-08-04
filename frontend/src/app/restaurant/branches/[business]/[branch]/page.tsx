@@ -10,7 +10,7 @@ import { Field, Input, Select } from "@/components/ui/forms";
 import { useToast } from "@/components/ui/navigation";
 import { restaurantNav } from "@/lib/admin-nav";
 import { ApiError } from "@/lib/api/client";
-import { businessBranchApi } from "@/features/business/api/business-branch-api";
+import { businessBranchApi, invitationErrorMessage } from "@/features/business/api/business-branch-api";
 import { setBranchDashboardContext } from "@/features/business/lib/branch-context";
 
 export default function BranchSettingsPage() {
@@ -30,6 +30,13 @@ export default function BranchSettingsPage() {
     queryKey: ["branch-staff", businessPublicId, branchPublicId],
     queryFn: async () =>
       (await businessBranchApi.listBranchUsers(businessPublicId, branchPublicId)).data.users,
+  });
+
+  const invitationsQuery = useQuery({
+    queryKey: ["branch-invitations", businessPublicId, branchPublicId],
+    queryFn: async () =>
+      (await businessBranchApi.listBranchInvitations(businessPublicId, branchPublicId)).data
+        .invitations,
   });
 
   const branch = branchQuery.data;
@@ -53,7 +60,6 @@ export default function BranchSettingsPage() {
   const [staffFirst, setStaffFirst] = useState("");
   const [staffLast, setStaffLast] = useState("");
   const [staffRole, setStaffRole] = useState("branch_manager");
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: () =>
@@ -95,26 +101,71 @@ export default function BranchSettingsPage() {
     },
   });
 
-  const assignStaff = useMutation({
+  const inviteStaff = useMutation({
     mutationFn: () =>
-      businessBranchApi.assignBranchUser(businessPublicId, branchPublicId, {
+      businessBranchApi.createBranchInvitation(businessPublicId, branchPublicId, {
         email: staffEmail,
-        first_name: staffFirst,
-        last_name: staffLast,
+        full_name: [staffFirst, staffLast].filter(Boolean).join(" ") || undefined,
         role: staffRole,
       }),
-    onSuccess: (res) => {
-      setTempPassword(res.data.temporary_password);
+    onSuccess: () => {
       setStaffEmail("");
       setStaffFirst("");
       setStaffLast("");
-      qc.invalidateQueries({ queryKey: ["branch-staff", businessPublicId, branchPublicId] });
-      push({ title: "Staff assigned", tone: "success" });
+      qc.invalidateQueries({ queryKey: ["branch-invitations", businessPublicId, branchPublicId] });
+      push({
+        title: "Invitation sent",
+        description: "They will create their own password from the secure email link.",
+        tone: "success",
+      });
     },
     onError: (err: unknown) => {
       push({
-        title: "Assignment failed",
-        description: err instanceof ApiError ? err.message : "Request failed",
+        title: "Invitation failed",
+        description:
+          err instanceof ApiError ? invitationErrorMessage(err) : "Request failed",
+        tone: "error",
+      });
+    },
+  });
+
+  const resendInvite = useMutation({
+    mutationFn: (invitationPublicId: string) =>
+      businessBranchApi.resendBranchInvitation(
+        businessPublicId,
+        branchPublicId,
+        invitationPublicId,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["branch-invitations", businessPublicId, branchPublicId] });
+      push({ title: "Invitation resent", tone: "success" });
+    },
+    onError: (err: unknown) => {
+      push({
+        title: "Resend failed",
+        description:
+          err instanceof ApiError ? invitationErrorMessage(err) : "Request failed",
+        tone: "error",
+      });
+    },
+  });
+
+  const revokeInvite = useMutation({
+    mutationFn: (invitationPublicId: string) =>
+      businessBranchApi.revokeBranchInvitation(
+        businessPublicId,
+        branchPublicId,
+        invitationPublicId,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["branch-invitations", businessPublicId, branchPublicId] });
+      push({ title: "Invitation revoked", tone: "success" });
+    },
+    onError: (err: unknown) => {
+      push({
+        title: "Revoke failed",
+        description:
+          err instanceof ApiError ? invitationErrorMessage(err) : "Request failed",
         tone: "error",
       });
     },
@@ -126,6 +177,14 @@ export default function BranchSettingsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["branch-staff", businessPublicId, branchPublicId] });
       push({ title: "Staff removed", tone: "success" });
+    },
+    onError: (err: unknown) => {
+      push({
+        title: "Remove failed",
+        description:
+          err instanceof ApiError ? invitationErrorMessage(err) : "Request failed",
+        tone: "error",
+      });
     },
   });
 
@@ -246,7 +305,59 @@ export default function BranchSettingsPage() {
                 </li>
               ))}
             </ul>
+
             <div className="space-y-3 border-t border-black/5 pt-4">
+              <h3 className="text-sm font-semibold">Pending invitations</h3>
+              <ul className="space-y-2">
+                {(invitationsQuery.data ?? [])
+                  .filter((inv) => inv.status === "pending")
+                  .map((inv) => (
+                    <li
+                      key={inv.public_id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-black/5 px-3 py-2 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{inv.full_name || inv.email}</p>
+                        <p className="text-black/55">
+                          {inv.email} · {inv.role} · expires{" "}
+                          {inv.expires_at
+                            ? new Date(inv.expires_at).toLocaleString()
+                            : "soon"}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resendInvite.isPending}
+                          onClick={() => resendInvite.mutate(inv.public_id)}
+                        >
+                          Resend
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={revokeInvite.isPending}
+                          onClick={() => revokeInvite.mutate(inv.public_id)}
+                        >
+                          Revoke
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                {(invitationsQuery.data ?? []).filter((inv) => inv.status === "pending")
+                  .length === 0 ? (
+                  <li className="text-sm text-black/50">No pending invitations.</li>
+                ) : null}
+              </ul>
+            </div>
+
+            <div className="space-y-3 border-t border-black/5 pt-4">
+              <h3 className="text-sm font-semibold">Invite staff</h3>
+              <p className="text-sm text-black/55">
+                They receive a secure email and create their own password. No password is shown
+                here.
+              </p>
               <Field label="First name">
                 <Input value={staffFirst} onChange={(e) => setStaffFirst(e.target.value)} />
               </Field>
@@ -266,16 +377,11 @@ export default function BranchSettingsPage() {
                 </Select>
               </Field>
               <Button
-                onClick={() => assignStaff.mutate()}
-                disabled={assignStaff.isPending || !staffEmail}
+                onClick={() => inviteStaff.mutate()}
+                disabled={inviteStaff.isPending || !staffEmail}
               >
-                Assign staff
+                Send invitation
               </Button>
-              {tempPassword ? (
-                <p className="text-sm text-black/70">
-                  Temporary password: <code>{tempPassword}</code>
-                </p>
-              ) : null}
             </div>
           </section>
         </div>

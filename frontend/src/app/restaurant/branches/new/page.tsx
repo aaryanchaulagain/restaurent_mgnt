@@ -39,6 +39,10 @@ function NewBranchForm() {
   const [country, setCountry] = useState("AU");
   const [timezone, setTimezone] = useState("Australia/Sydney");
   const [status, setStatus] = useState("draft");
+  const [inviteManager, setInviteManager] = useState(false);
+  const [managerName, setManagerName] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+  const [managerPhone, setManagerPhone] = useState("");
 
   const create = useMutation({
     mutationFn: () =>
@@ -54,6 +58,11 @@ function NewBranchForm() {
         country: country || undefined,
         timezone: timezone || undefined,
         status,
+        invite_manager: inviteManager,
+        manager_full_name: inviteManager ? managerName || undefined : undefined,
+        manager_email: inviteManager ? managerEmail || undefined : undefined,
+        manager_phone: inviteManager ? managerPhone || undefined : undefined,
+        manager_role: inviteManager ? "branch_manager" : undefined,
       }),
     onSuccess: (res) => {
       const branch = res.data.branch;
@@ -66,7 +75,9 @@ function NewBranchForm() {
       qc.invalidateQueries({ queryKey: ["business-branch-context"] });
       push({
         title: "Branch created",
-        description: "Configure menus, hours, delivery, and payments before activating.",
+        description: res.data.invitation
+          ? "Manager invitation sent. They will create their own password."
+          : "Configure menus, hours, delivery, and payments before activating.",
         tone: "success",
       });
       router.push(`/restaurant/branches/${businessPublicId}/${branch.public_id}`);
@@ -155,7 +166,56 @@ function NewBranchForm() {
           Menus, opening hours, delivery area, and payment methods are configured after creation
           using this branch’s linked restaurant.
         </p>
-        <Button type="submit" disabled={create.isPending || !name || !businessPublicId}>
+
+        <div className="space-y-3 rounded-[var(--radius-md)] border border-black/10 bg-[var(--surface-sunken,#f7f4ef)] p-4">
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={inviteManager}
+              onChange={(e) => setInviteManager(e.target.checked)}
+            />
+            <span>
+              <strong>Invite a branch manager now</strong>
+              <span className="mt-1 block text-black/60">
+                The manager will receive a secure email invitation to create their own password.
+                You will never see or set their password.
+              </span>
+            </span>
+          </label>
+          {inviteManager ? (
+            <div className="space-y-3 pt-1">
+              <Field label="Manager full name">
+                <Input
+                  value={managerName}
+                  onChange={(e) => setManagerName(e.target.value)}
+                  required={inviteManager}
+                />
+              </Field>
+              <Field label="Manager email">
+                <Input
+                  type="email"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  required={inviteManager}
+                />
+              </Field>
+              <Field label="Manager phone">
+                <Input value={managerPhone} onChange={(e) => setManagerPhone(e.target.value)} />
+              </Field>
+            </div>
+          ) : null}
+        </div>
+
+        <Button
+          type="submit"
+          disabled={
+            create.isPending ||
+            !name ||
+            !businessPublicId ||
+            (inviteManager && (!managerName || !managerEmail))
+          }
+        >
           {create.isPending ? "Creating…" : "Create draft branch"}
         </Button>
       </form>
