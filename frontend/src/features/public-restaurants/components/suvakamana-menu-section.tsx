@@ -100,12 +100,13 @@ export function SuvakamanaMenuSection() {
       return;
     }
     try {
-      await addItem({
+      const result = await addItem({
         menu_item_public_id: target.public_id,
         variant_public_id: variantId ?? undefined,
         quantity: qty,
         modifier_option_public_ids: modifierIds.length > 0 ? modifierIds : undefined,
       });
+      if (!result.ok) return;
       push({ title: "Added to cart", description: `${target.name} × ${qty}`, tone: "success" });
       setSelected(null);
     } catch (e) {

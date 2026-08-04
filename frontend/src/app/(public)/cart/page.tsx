@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/features/cart/components/cart-provider";
+import { cartBranchLabel, cartLocality } from "@/features/cart/lib/cart-branch-label";
 import { formatCents } from "@/lib/utils";
 
 export default function CartPage() {
@@ -23,10 +24,20 @@ export default function CartPage() {
     );
   }
 
+  const locality = cartLocality(cart);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-4xl">Cart</h1>
-      <p className="mt-2 text-sm text-[var(--text-muted)]">Ordering from {cart.restaurant.trading_name}</p>
+      <p className="mt-2 text-sm text-[var(--text-muted)]">
+        Ordering from {cartBranchLabel(cart)}
+        {locality ? ` · ${locality}` : ""}
+      </p>
+      {cart.accepting_orders === false ? (
+        <p className="mt-3 text-sm text-amber-800">
+          This location is not accepting orders right now. You can keep browsing, but checkout is unavailable.
+        </p>
+      ) : null}
       <ul className="mt-8 space-y-6">
         {cart.items.map((item) => (
           <li key={item.public_id} className="flex items-center justify-between gap-4 border-b pb-4">
@@ -64,7 +75,7 @@ export default function CartPage() {
         </div>
       ) : null}
       <Link href="/checkout" className="mt-8 block">
-        <Button className="w-full" disabled={!pricing?.minimum_order_met}>
+        <Button className="w-full" disabled={!pricing?.minimum_order_met || cart.accepting_orders === false}>
           Continue to checkout
         </Button>
       </Link>

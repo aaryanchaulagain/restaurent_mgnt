@@ -113,9 +113,36 @@ class OrderPlacementService
                     throw new OrderApiException('MINIMUM_ORDER_NOT_MET', OrderErrorResponse::messageForCode('MINIMUM_ORDER_NOT_MET'), 422);
                 }
 
-                $restaurant = $cart->restaurant;
+                $restaurant = $cart->restaurant()->with(['business', 'branch'])->first();
                 if (! $restaurant || $restaurant->suspended_at || ! $restaurant->accepting_orders) {
                     throw new OrderApiException('RESTAURANT_UNAVAILABLE', OrderErrorResponse::messageForCode('RESTAURANT_UNAVAILABLE'), 422);
+                }
+
+                $branchCheck = app(\App\Services\Cart\CartBranchContext::class)->validateForOrdering($restaurant);
+                if (! $branchCheck['ok']) {
+                    $orderCode = match ($branchCheck['code']) {
+                        'CART_BRANCH_NOT_ACCEPTING_ORDERS' => 'ORDER_BRANCH_UNAVAILABLE',
+                        'CART_BRANCH_RESTAURANT_MISMATCH' => 'ORDER_BRANCH_CONTEXT_INVALID',
+                        default => 'ORDER_BRANCH_UNAVAILABLE',
+                    };
+                    throw new OrderApiException(
+                        $orderCode,
+                        $branchCheck['message'] ?? OrderErrorResponse::messageForCode('RESTAURANT_UNAVAILABLE'),
+                        422,
+                    );
+                }
+
+                // Ensure every line item still belongs to the cart restaurant (branch lock).
+                $cart->loadMissing(['items.menuItem']);
+                foreach ($cart->items as $line) {
+                    $itemRestaurantId = $line->menuItem?->restaurant_id ?? $line->menuItem()->value('restaurant_id');
+                    if ((int) $itemRestaurantId !== (int) $restaurant->id) {
+                        throw new OrderApiException(
+                            'CART_ITEM_BRANCH_MISMATCH',
+                            'A cart item does not belong to the selected location.',
+                            422,
+                        );
+                    }
                 }
 
                 $commission = $this->snapshots->snapshotCommission($restaurant);

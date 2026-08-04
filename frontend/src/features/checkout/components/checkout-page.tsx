@@ -14,7 +14,8 @@ import {
 import { Breadcrumbs } from "@/components/ui/navigation";
 import { useCart } from "@/features/cart/components/cart-provider";
 import { cartApi, type CartPricing } from "@/features/cart/api/cart-api";
-import { apiGet } from "@/lib/api/client";
+import { cartBranchLabel, cartLocality } from "@/features/cart/lib/cart-branch-label";
+import { apiGet, ApiError } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { PlaceOrderButton } from "@/features/orders/components/place-order-button";
 import {
@@ -200,10 +201,25 @@ export function CheckoutPageClient() {
       setQuote(data.quote);
       refetch();
     } catch (e: unknown) {
-      const msg =
-        e && typeof e === "object" && "message" in e && typeof (e as Error).message === "string"
-          ? (e as Error).message
-          : "Could not prepare checkout quote.";
+      let msg = "Could not prepare checkout quote.";
+      if (e instanceof ApiError) {
+        const code = e.code ?? e.errors?.code?.[0];
+        msg =
+          code === "CHECKOUT_BRANCH_NOT_ACCEPTING_ORDERS" ||
+          code === "CART_BRANCH_NOT_ACCEPTING_ORDERS"
+            ? "This branch is not accepting orders right now."
+            : code === "CHECKOUT_BRANCH_UNAVAILABLE" || code === "CART_BRANCH_UNAVAILABLE"
+              ? "This branch is unavailable for checkout."
+              : code === "CHECKOUT_FULFILMENT_UNAVAILABLE"
+                ? "That fulfilment method is not available for this branch."
+                : code === "CHECKOUT_ADDRESS_OUTSIDE_SERVICE_AREA"
+                  ? "This address is outside the branch delivery area."
+                  : code === "CHECKOUT_PAYMENT_METHOD_UNAVAILABLE"
+                    ? "That payment method is not available for this branch."
+                    : e.message;
+      } else if (e && typeof e === "object" && "message" in e && typeof (e as Error).message === "string") {
+        msg = (e as Error).message;
+      }
       setQuoteError(msg);
       setQuote(null);
     } finally {
@@ -238,6 +254,33 @@ export function CheckoutPageClient() {
         ]}
       />
       <h1 className="mt-4 text-4xl">Checkout</h1>
+      <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+        <p className="font-medium text-[var(--text-primary)]">Ordering from</p>
+        <p className="mt-1 text-[var(--text-secondary)]">{cartBranchLabel(cart)}</p>
+        {cartLocality(cart) ? (
+          <p className="text-xs text-[var(--text-muted)]">{cartLocality(cart)}</p>
+        ) : null}
+        {cart.business?.slug && cart.branch?.public_id ? (
+          <Link
+            href={`/businesses/${cart.business.slug}/branches/${cart.branch.public_id}`}
+            className="mt-2 inline-block text-xs font-medium text-[var(--color-burnt-orange)]"
+          >
+            View branch menu
+          </Link>
+        ) : (
+          <Link
+            href={`/restaurants/${cart.restaurant.slug}`}
+            className="mt-2 inline-block text-xs font-medium text-[var(--color-burnt-orange)]"
+          >
+            View menu
+          </Link>
+        )}
+      </div>
+      {cart.accepting_orders === false ? (
+        <p className="mt-3 text-sm text-amber-800" role="alert">
+          This location is not accepting orders. Checkout quotes will be rejected until ordering resumes.
+        </p>
+      ) : null}
 
       {pricing?.warnings?.length ? (
         <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
@@ -393,7 +436,7 @@ export function CheckoutPageClient() {
 
         <aside className="h-fit rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-5 shadow-[var(--shadow-sm)] lg:sticky lg:top-24">
           <h2 className="text-2xl">Order summary</h2>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">{cart.restaurant.trading_name}</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">{cartBranchLabel(cart)}</p>
           <ul className="mt-4 space-y-3 text-sm">
             {cart.items.map((item) => (
               <li key={item.public_id} className="flex justify-between gap-3">

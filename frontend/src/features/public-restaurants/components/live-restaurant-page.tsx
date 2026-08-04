@@ -146,13 +146,14 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
       return;
     }
     try {
-      await addItem({
+      const result = await addItem({
         menu_item_public_id: selected.public_id,
         variant_public_id: variantId ?? undefined,
         quantity: qty,
         modifier_option_public_ids: modifierIds,
         special_instructions: instructions || undefined,
       });
+      if (!result.ok) return;
       push({ title: "Added to cart", description: `${selected.name} × ${qty}`, tone: "success" });
       setSelected(null);
     } catch (e) {

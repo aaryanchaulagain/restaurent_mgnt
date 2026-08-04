@@ -37,7 +37,8 @@ export function SiteHeader() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const { itemCount } = useCart();
+  const { itemCount, cart } = useCart();
+  const cartHint = cart?.branch?.name ?? cart?.restaurant?.trading_name ?? null;
 
   const links = useMemo(
     () => [
@@ -95,6 +96,11 @@ export function SiteHeader() {
             >
               <ShoppingBag className="h-4 w-4" />
               Cart{itemCount > 0 ? ` (${itemCount})` : ""}
+              {cartHint && itemCount > 0 ? (
+                <span className="ml-1 hidden max-w-[8rem] truncate text-xs font-normal text-[var(--text-muted)] lg:inline">
+                  · {cartHint}
+                </span>
+              ) : null}
             </Button>
           </nav>
 

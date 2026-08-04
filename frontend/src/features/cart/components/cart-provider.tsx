@@ -7,14 +7,28 @@ import { ApiError } from "@/lib/api/client";
 
 type AddItemPayload = Parameters<typeof cartApi.addItem>[0];
 
+type ConflictData = {
+  current_cart?: {
+    business_name?: string | null;
+    branch_name?: string | null;
+    restaurant_slug?: string | null;
+  } | null;
+  requested_branch?: {
+    business_name?: string | null;
+    branch_name?: string | null;
+    restaurant_slug?: string | null;
+  } | null;
+  current_restaurant?: { slug: string; trading_name: string } | null;
+  requested_restaurant?: { slug: string; trading_name: string } | null;
+};
+
 type ConflictState = {
   open: boolean;
-  data: {
-    current_restaurant?: { slug: string; trading_name: string } | null;
-    requested_restaurant?: { slug: string; trading_name: string } | null;
-  } | null;
+  data: ConflictData | null;
   pending: AddItemPayload | null;
 };
+
+export type AddItemResult = { ok: true } | { ok: false; conflict: true };
 
 type CartContextValue = {
   cart: CartState | null;
@@ -22,12 +36,13 @@ type CartContextValue = {
   itemCount: number;
   isLoading: boolean;
   refetch: () => void;
-  addItem: (payload: AddItemPayload) => Promise<void>;
+  addItem: (payload: AddItemPayload) => Promise<AddItemResult>;
   conflict: ConflictState;
   clearConflict: () => void;
   confirmReplaceRestaurant: () => Promise<void>;
   updateQuantity: (lineId: string, quantity: number) => Promise<void>;
   removeLine: (lineId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -56,7 +71,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addMutation = useMutation({
     mutationFn: cartApi.addItem,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["cart"] });
+      void qc.invalidateQueries({ queryKey: ["checkout-quote"] });
+    },
   });
 
   const updateMutation = useMutation({
@@ -70,19 +88,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
   });
 
+  const clearMutation = useMutation({
+    mutationFn: () => cartApi.clearCart(),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["cart"] });
+      void qc.removeQueries({ queryKey: ["checkout-quote"] });
+    },
+  });
+
   const addMutateAsync = addMutation.mutateAsync;
   const updateMutateAsync = updateMutation.mutateAsync;
   const removeMutateAsync = removeMutation.mutateAsync;
+  const clearMutateAsync = clearMutation.mutateAsync;
 
   const addItem = useCallback(
-    async (payload: AddItemPayload) => {
+    async (payload: AddItemPayload): Promise<AddItemResult> => {
       try {
         await addMutateAsync(payload);
+        return { ok: true };
       } catch (e) {
-        if (e instanceof ApiError && e.status === 409) {
-          const meta = (e.envelope?.data ?? null) as ConflictState["data"];
+        if (
+          e instanceof ApiError &&
+          e.status === 409 &&
+          (e.code === "CART_BRANCH_CONFLICT" ||
+            e.code === "CART_RESTAURANT_CONFLICT" ||
+            e.errors?.code?.includes("CART_BRANCH_CONFLICT"))
+        ) {
+          const meta = (e.envelope?.data ?? null) as ConflictData | null;
           setConflict({ open: true, data: meta, pending: payload });
-          return;
+          return { ok: false, conflict: true };
         }
         throw e;
       }
@@ -94,14 +128,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const confirmReplaceRestaurant = useCallback(async () => {
     if (!conflict.pending) return;
+    const pending = conflict.pending;
     try {
-      await addMutateAsync({ ...conflict.pending, replace_restaurant: true });
+      // Explicit clear-then-add (do not rely on replace flag alone).
+      await clearMutateAsync();
+      await addMutateAsync({ ...pending, replace_restaurant: undefined });
       setConflict(emptyConflict);
+      await qc.invalidateQueries({ queryKey: ["cart"] });
     } catch (e) {
+      // Keep dialog closed but leave original cart if clear failed mid-flight.
       setConflict(emptyConflict);
+      await qc.invalidateQueries({ queryKey: ["cart"] });
       throw e;
     }
-  }, [addMutateAsync, conflict.pending]);
+  }, [addMutateAsync, clearMutateAsync, conflict.pending, qc]);
+
+  const clearCart = useCallback(async () => {
+    await clearMutateAsync();
+  }, [clearMutateAsync]);
 
   const updateQuantity = useCallback(
     async (id: string, quantity: number) => {
@@ -134,6 +178,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       confirmReplaceRestaurant,
       updateQuantity,
       removeLine,
+      clearCart,
     }),
     [
       query.data,
@@ -145,6 +190,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       confirmReplaceRestaurant,
       updateQuantity,
       removeLine,
+      clearCart,
     ],
   );
 

@@ -3,7 +3,7 @@
 namespace App\Services\Checkout;
 
 use App\Models\CheckoutQuote;
-use App\Models\Restaurant;
+use App\Services\Cart\CartBranchContext;
 use App\Services\Cart\CartPricingService;
 use App\Services\Cart\CartService;
 use App\Services\Restaurant\ServiceAreaValidationService;
@@ -17,6 +17,7 @@ class CheckoutQuoteService
         private readonly CartService $cartService,
         private readonly CartPricingService $pricing,
         private readonly ServiceAreaValidationService $serviceAreas,
+        private readonly CartBranchContext $branchContext,
     ) {}
 
     public function create(Request $request, array $input): array
@@ -27,7 +28,45 @@ class CheckoutQuoteService
         }
 
         $fulfilment = $input['fulfilment_type'];
-        $restaurant = $cart->restaurant;
+        $restaurant = $cart->restaurant()->with(['business', 'branch'])->first();
+        if (! $restaurant) {
+            throw ValidationException::withMessages([
+                'code' => ['CHECKOUT_BRANCH_UNAVAILABLE'],
+                'cart' => ['Cart location is unavailable.'],
+            ]);
+        }
+
+        $branchCheck = $this->branchContext->validateForOrdering($restaurant);
+        if (! $branchCheck['ok']) {
+            $code = match ($branchCheck['code']) {
+                'CART_BRANCH_NOT_ACCEPTING_ORDERS' => 'CHECKOUT_BRANCH_NOT_ACCEPTING_ORDERS',
+                'CART_BRANCH_RESTAURANT_MISMATCH' => 'CHECKOUT_CART_BRANCH_CHANGED',
+                default => 'CHECKOUT_BRANCH_UNAVAILABLE',
+            };
+            throw ValidationException::withMessages([
+                'code' => [$code],
+                'cart' => [$branchCheck['message'] ?? 'This location cannot accept checkout.'],
+            ]);
+        }
+
+        // Ignore any client-supplied branch/restaurant identifiers — cart lock is authoritative.
+        // Read from the raw request so stripped/unvalidated client fields still cannot spoof context.
+        $suppliedBranch = $request->input('branch_public_id') ?? $input['branch_public_id'] ?? null;
+        $suppliedSlug = $request->input('restaurant_slug') ?? $input['restaurant_slug'] ?? null;
+        $suppliedRestaurantId = $request->input('restaurant_id') ?? $input['restaurant_id'] ?? null;
+        if ($suppliedBranch || $suppliedSlug || $suppliedRestaurantId) {
+            $summary = $this->branchContext->summarize($restaurant);
+            if (($suppliedBranch && $suppliedBranch !== ($summary['branch']['public_id'] ?? null))
+                || ($suppliedSlug && $suppliedSlug !== $restaurant->slug)
+                || ($suppliedRestaurantId && (string) $suppliedRestaurantId !== (string) $restaurant->public_id
+                    && (string) $suppliedRestaurantId !== (string) $restaurant->id)) {
+                throw ValidationException::withMessages([
+                    'code' => ['CHECKOUT_CART_BRANCH_CHANGED'],
+                    'cart' => ['Checkout must use the branch locked to your cart.'],
+                ]);
+            }
+        }
+
         $pricing = $this->pricing->calculate($cart, true);
 
         if (! $pricing['minimum_order_met']) {
@@ -43,11 +82,18 @@ class CheckoutQuoteService
 
         if ($fulfilment === 'third_party_delivery') {
             throw ValidationException::withMessages([
+                'code' => ['CHECKOUT_FULFILMENT_UNAVAILABLE'],
                 'fulfilment_type' => ['Third-party delivery is not available yet.'],
             ]);
         }
 
         if ($fulfilment === 'restaurant_delivery') {
+            if (! $restaurant->restaurant_delivery_enabled) {
+                throw ValidationException::withMessages([
+                    'code' => ['CHECKOUT_FULFILMENT_UNAVAILABLE'],
+                    'fulfilment_type' => ['Delivery is not available for this location.'],
+                ]);
+            }
             $addr = $input['address'] ?? [];
             $check = $this->serviceAreas->validateDeliveryAddress(
                 $restaurant,
@@ -57,13 +103,17 @@ class CheckoutQuoteService
             );
             if (! $check['supported']) {
                 throw ValidationException::withMessages([
-                    'address' => [$check['message'] ?? 'This restaurant does not currently deliver to this address.'],
+                    'code' => ['CHECKOUT_ADDRESS_OUTSIDE_SERVICE_AREA'],
+                    'address' => [$check['message'] ?? 'This location does not currently deliver to this address.'],
                 ]);
             }
         }
 
         if ($fulfilment === 'pickup' && ! $restaurant->pickup_enabled) {
-            throw ValidationException::withMessages(['fulfilment_type' => ['Pickup is not available.']]);
+            throw ValidationException::withMessages([
+                'code' => ['CHECKOUT_FULFILMENT_UNAVAILABLE'],
+                'fulfilment_type' => ['Pickup is not available.'],
+            ]);
         }
 
         $expires = now()->addMinutes(config('checkout.quote_expiry_minutes'));
@@ -79,6 +129,8 @@ class CheckoutQuoteService
             'expires_at' => $expires,
         ]);
 
+        $summary = $this->branchContext->summarize($restaurant);
+
         return [
             'quote' => [
                 'public_id' => $quote->public_id,
@@ -86,6 +138,9 @@ class CheckoutQuoteService
                 'fulfilment_type' => $quote->fulfilment_type,
                 'pricing' => $pricing,
                 'warnings' => $warnings,
+                'business' => $summary['business'],
+                'branch' => $summary['branch'],
+                'restaurant' => $summary['restaurant'],
             ],
         ];
     }

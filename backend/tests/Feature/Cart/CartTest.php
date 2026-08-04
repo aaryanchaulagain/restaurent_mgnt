@@ -65,7 +65,7 @@ class CartTest extends TestCase
             'menu_item_public_id' => $item2->public_id,
             'quantity' => 1,
         ])->assertStatus(409)
-            ->assertJsonPath('errors.code.0', 'CART_RESTAURANT_CONFLICT');
+            ->assertJsonPath('errors.code.0', 'CART_BRANCH_CONFLICT');
     }
 
     public function test_unauthenticated_cannot_add_to_cart(): void

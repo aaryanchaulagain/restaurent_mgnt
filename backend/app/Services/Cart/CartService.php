@@ -2,13 +2,11 @@
 
 namespace App\Services\Cart;
 
-use App\Enums\Partner\RestaurantStatus;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CartItemModifier;
 use App\Models\MenuItem;
 use App\Models\MenuItemVariant;
-use App\Models\ModifierGroup;
 use App\Models\ModifierOption;
 use App\Models\Restaurant;
 use App\Models\User;
@@ -22,6 +20,7 @@ class CartService
 {
     public function __construct(
         private readonly CartPricingService $pricing,
+        private readonly CartBranchContext $branchContext,
     ) {}
 
     public function resolveCart(Request $request): ?Cart
@@ -154,7 +153,15 @@ class CartService
         CartItem::query()->where('cart_id', $cart->id)->where('public_id', $linePublicId)->delete();
         $cart->increment('version');
 
-        return $this->cartPayload($cart->fresh(['items.modifiers', 'restaurant']));
+        $cart = $cart->fresh(['items.modifiers', 'restaurant']);
+        // Empty cart releases the restaurant/branch lock by abandoning the cart shell.
+        if ($cart->items->isEmpty()) {
+            $cart->update(['status' => 'abandoned']);
+
+            return ['cart' => null, 'pricing' => null];
+        }
+
+        return $this->cartPayload($cart);
     }
 
     public function clear(Request $request): array
@@ -246,15 +253,20 @@ class CartService
     private function resolveOrCreateCart(Request $request, Restaurant $restaurant, bool $replace): Cart
     {
         $existing = $this->resolveCart($request);
-        if ($existing && $existing->restaurant_id !== $restaurant->id) {
-            if (! $replace) {
+        if ($existing && (int) $existing->restaurant_id !== (int) $restaurant->id) {
+            // Empty cart shells are unlocked by abandoning; treat empty as switchable.
+            if ($existing->items()->count() === 0) {
+                $existing->update(['status' => 'abandoned']);
+                $existing = null;
+            } elseif (! $replace) {
                 throw ValidationException::withMessages([
-                    'code' => ['CART_RESTAURANT_CONFLICT'],
+                    'code' => ['CART_BRANCH_CONFLICT'],
                 ]);
+            } else {
+                $existing->items()->delete();
+                $existing->update(['status' => 'abandoned']);
+                $existing = null;
             }
-            $existing->items()->delete();
-            $existing->update(['status' => 'abandoned']);
-            $existing = null;
         }
 
         if ($existing) {
@@ -295,12 +307,13 @@ class CartService
 
     private function assertRestaurantOrderable(int $restaurantId): Restaurant
     {
-        $restaurant = Restaurant::query()->findOrFail($restaurantId);
-        if ($restaurant->status !== RestaurantStatus::Active || ! $restaurant->published_at || $restaurant->suspended_at) {
-            throw ValidationException::withMessages(['restaurant' => ['Restaurant is unavailable.']]);
-        }
-        if (! $restaurant->accepting_orders) {
-            throw ValidationException::withMessages(['restaurant' => ['Restaurant is not accepting orders.']]);
+        $restaurant = Restaurant::query()->with(['business', 'branch'])->findOrFail($restaurantId);
+        $check = $this->branchContext->validateForOrdering($restaurant);
+        if (! $check['ok']) {
+            throw ValidationException::withMessages([
+                'code' => [$check['code'] ?? 'CART_BRANCH_UNAVAILABLE'],
+                'restaurant' => [$check['message'] ?? 'This location is unavailable.'],
+            ]);
         }
 
         return $restaurant;
@@ -360,15 +373,24 @@ class CartService
 
     private function serializeCart(Cart $cart): array
     {
+        $cart->loadMissing(['restaurant.business', 'restaurant.branch', 'items.menuItem', 'items.variant', 'items.modifiers']);
+        $summary = $cart->restaurant
+            ? $this->branchContext->summarize($cart->restaurant)
+            : null;
+
         return [
             'public_id' => $cart->public_id,
             'version' => $cart->version,
             'currency' => $cart->currency,
-            'restaurant' => [
-                'slug' => $cart->restaurant->slug,
-                'trading_name' => $cart->restaurant->trading_name,
-                'minimum_order_cents' => $cart->restaurant->minimum_order_cents,
+            'business' => $summary['business'] ?? null,
+            'branch' => $summary['branch'] ?? null,
+            'restaurant' => $summary['restaurant'] ?? [
+                'slug' => $cart->restaurant?->slug,
+                'trading_name' => $cart->restaurant?->trading_name,
+                'minimum_order_cents' => $cart->restaurant?->minimum_order_cents,
             ],
+            'accepting_orders' => $summary['accepting_orders'] ?? false,
+            'is_temporarily_closed' => $summary['is_temporarily_closed'] ?? false,
             'items' => $cart->items->map(fn (CartItem $line) => [
                 'public_id' => $line->public_id,
                 'quantity' => $line->quantity,
@@ -382,6 +404,51 @@ class CartService
                     'price_adjustment_snapshot_cents' => $m->price_adjustment_snapshot_cents,
                 ]),
             ])->values(),
+        ];
+    }
+
+    /**
+     * Safe conflict payload for CART_BRANCH_CONFLICT responses.
+     *
+     * @return array{current_cart: array, requested_branch: array, current_restaurant: array, requested_restaurant: array}
+     */
+    public function conflictPayload(?Cart $cart, ?MenuItem $requestedItem): array
+    {
+        $current = $cart?->restaurant
+            ? $this->branchContext->summarize($cart->restaurant->loadMissing(['business', 'branch']))
+            : null;
+        $requestedRestaurant = $requestedItem?->restaurant;
+        if ($requestedRestaurant) {
+            $requestedRestaurant->loadMissing(['business', 'branch']);
+        }
+        $requested = $requestedRestaurant
+            ? $this->branchContext->summarize($requestedRestaurant)
+            : null;
+
+        return [
+            'current_cart' => [
+                'business_name' => $current['business']['name'] ?? $current['restaurant']['trading_name'] ?? null,
+                'branch_name' => $current['branch']['name'] ?? $current['restaurant']['trading_name'] ?? null,
+                'restaurant_slug' => $current['restaurant']['slug'] ?? null,
+            ],
+            'requested_branch' => [
+                'business_name' => $requested['business']['name'] ?? $requested['restaurant']['trading_name'] ?? null,
+                'branch_name' => $requested['branch']['name'] ?? $requested['restaurant']['trading_name'] ?? null,
+                'restaurant_slug' => $requested['restaurant']['slug'] ?? null,
+            ],
+            // Backward-compatible aliases for existing frontend conflict modal.
+            'current_restaurant' => [
+                'slug' => $current['restaurant']['slug'] ?? null,
+                'trading_name' => $current['branch']['name']
+                    ?? $current['restaurant']['trading_name']
+                    ?? null,
+            ],
+            'requested_restaurant' => [
+                'slug' => $requested['restaurant']['slug'] ?? null,
+                'trading_name' => $requested['branch']['name']
+                    ?? $requested['restaurant']['trading_name']
+                    ?? null,
+            ],
         ];
     }
 }

@@ -38,26 +38,38 @@ class CartController extends Controller
             $payload = $this->cartService->addItem($request, $data);
         } catch (ValidationException $e) {
             $errors = $e->errors();
-            if (isset($errors['code']) && in_array('CART_RESTAURANT_CONFLICT', $errors['code'], true)) {
-                $item = MenuItem::query()->where('public_id', $data['menu_item_public_id'])->with('restaurant')->first();
+            $codes = $errors['code'] ?? [];
+            if (in_array('CART_BRANCH_CONFLICT', $codes, true)
+                || in_array('CART_RESTAURANT_CONFLICT', $codes, true)) {
+                $item = MenuItem::query()
+                    ->where('public_id', $data['menu_item_public_id'])
+                    ->with(['restaurant.business', 'restaurant.branch'])
+                    ->first();
                 $cart = $this->cartService->resolveCart($request);
+                $conflict = $this->cartService->conflictPayload($cart, $item);
 
                 return ApiResponse::error(
-                    'Your cart contains items from another restaurant.',
+                    'Your cart contains products from another branch.',
                     409,
-                    ['code' => ['CART_RESTAURANT_CONFLICT']],
-                    [
-                        'current_restaurant' => $cart ? [
-                            'slug' => $cart->restaurant->slug,
-                            'trading_name' => $cart->restaurant->trading_name,
-                        ] : null,
-                        'requested_restaurant' => $item ? [
-                            'slug' => $item->restaurant->slug,
-                            'trading_name' => $item->restaurant->trading_name,
-                        ] : null,
-                    ],
+                    ['code' => ['CART_BRANCH_CONFLICT']],
+                    $conflict,
+                    code: 'CART_BRANCH_CONFLICT',
                 );
             }
+
+            if (in_array('CART_BRANCH_NOT_ACCEPTING_ORDERS', $codes, true)
+                || in_array('CART_BRANCH_UNAVAILABLE', $codes, true)
+                || in_array('CART_BRANCH_RESTAURANT_MISMATCH', $codes, true)) {
+                $code = $codes[0];
+
+                return ApiResponse::error(
+                    $errors['restaurant'][0] ?? 'This location cannot accept orders.',
+                    422,
+                    $errors,
+                    code: $code,
+                );
+            }
+
             throw $e;
         }
 

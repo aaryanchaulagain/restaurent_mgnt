@@ -105,7 +105,21 @@ export type CartState = {
   public_id: string;
   version: number;
   currency: string;
+  business?: {
+    public_id: string;
+    slug: string;
+    name: string;
+    business_type: string;
+  } | null;
+  branch?: {
+    public_id: string;
+    name: string;
+    city?: string | null;
+    state?: string | null;
+  } | null;
   restaurant: { slug: string; trading_name: string; minimum_order_cents?: number };
+  accepting_orders?: boolean;
+  is_temporarily_closed?: boolean;
   items: Array<{
     public_id: string;
     quantity: number;

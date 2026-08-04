@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/overlay";
 import { useCart } from "@/features/cart/components/cart-provider";
+import { cartBranchLabel, cartLocality } from "@/features/cart/lib/cart-branch-label";
 import { formatCents } from "@/lib/utils";
 
 export function CartDrawer({
@@ -14,6 +15,7 @@ export function CartDrawer({
   onClose: () => void;
 }) {
   const { cart, pricing, isLoading } = useCart();
+  const locality = cartLocality(cart);
 
   return (
     <Drawer open={open} onClose={onClose} title="Your cart">
@@ -24,7 +26,8 @@ export function CartDrawer({
       ) : (
         <>
           <p className="text-sm text-[var(--text-secondary)]">
-            Ordering from <strong>{cart.restaurant.trading_name}</strong>
+            Your current cart is from <strong>{cartBranchLabel(cart)}</strong>
+            {locality ? ` (${locality})` : ""}.
           </p>
           <ul className="mt-5 space-y-4">
             {cart.items.map((item) => (
@@ -64,7 +67,7 @@ export function CartDrawer({
           ) : null}
           <div className="mt-6 flex flex-col gap-3">
             <Link href="/checkout" onClick={onClose}>
-              <Button className="w-full" disabled={!pricing?.minimum_order_met}>
+              <Button className="w-full" disabled={!pricing?.minimum_order_met || cart.accepting_orders === false}>
                 Checkout
               </Button>
             </Link>
