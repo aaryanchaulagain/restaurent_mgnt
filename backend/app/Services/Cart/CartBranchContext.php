@@ -90,25 +90,39 @@ class CartBranchContext
         }
 
         $branch = $restaurant->branch;
-        if ($branch) {
-            if (! $this->linksAreConsistent($branch, $restaurant)) {
-                return [
-                    'ok' => false,
-                    'code' => 'CART_BRANCH_RESTAURANT_MISMATCH',
-                    'message' => 'This location cannot accept orders right now.',
-                ];
-            }
+        if (! $branch) {
+            return [
+                'ok' => false,
+                'code' => 'CART_BRANCH_RESTAURANT_MISMATCH',
+                'message' => 'This location cannot accept orders right now.',
+            ];
+        }
 
-            if ($branch->suspended_at !== null
-                || ! in_array($branch->status, [BranchStatuses::ACTIVE, BranchStatuses::PAUSED], true)) {
-                return ['ok' => false, 'code' => 'CART_BRANCH_UNAVAILABLE', 'message' => 'This location is unavailable.'];
-            }
+        if (! $this->linksAreConsistent($branch, $restaurant)) {
+            return [
+                'ok' => false,
+                'code' => 'CART_BRANCH_RESTAURANT_MISMATCH',
+                'message' => 'This location cannot accept orders right now.',
+            ];
+        }
+
+        if ($branch->suspended_at !== null
+            || ! in_array($branch->status, [BranchStatuses::ACTIVE, BranchStatuses::PAUSED], true)) {
+            return ['ok' => false, 'code' => 'CART_BRANCH_UNAVAILABLE', 'message' => 'This location is unavailable.'];
+        }
+
+        if ($restaurant->business_id === null && $branch->business_id === null) {
+            return [
+                'ok' => false,
+                'code' => 'CART_BRANCH_RESTAURANT_MISMATCH',
+                'message' => 'This location cannot accept orders right now.',
+            ];
         }
 
         if ($status === RestaurantStatus::TemporarilyClosed
-            || ($branch && $branch->status === BranchStatuses::PAUSED)
+            || $branch->status === BranchStatuses::PAUSED
             || ! $restaurant->accepting_orders
-            || ($branch && ! $branch->accepting_orders)) {
+            || ! $branch->accepting_orders) {
             return [
                 'ok' => false,
                 'code' => 'CART_BRANCH_NOT_ACCEPTING_ORDERS',

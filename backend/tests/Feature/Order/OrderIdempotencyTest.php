@@ -257,6 +257,8 @@ class OrderIdempotencyTest extends TestCase
             'pickup_enabled' => true,
         ]);
 
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
+
         $menu = Menu::query()->create([
             'public_id' => (string) Str::uuid(),
             'restaurant_id' => $restaurant->id,

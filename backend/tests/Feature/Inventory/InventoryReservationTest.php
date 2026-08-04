@@ -232,6 +232,7 @@ class InventoryReservationTest extends TestCase
             'pickup_enabled' => true,
             'business_id' => $business->id,
         ]);
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
 
         $menu = Menu::query()->create([
             'public_id' => (string) Str::uuid(),
@@ -380,6 +381,7 @@ class InventoryReservationTest extends TestCase
             'pickup_enabled' => true,
             'business_id' => $business->id,
         ]);
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
         $menu = Menu::query()->create([
             'public_id' => (string) Str::uuid(),
             'restaurant_id' => $restaurant->id,
@@ -455,6 +457,19 @@ class InventoryReservationTest extends TestCase
             'joined_at' => now(),
         ]);
         $user->roles()->attach($role->id, ['restaurant_id' => $restaurant->id]);
+
+        $restaurant->loadMissing(['business', 'branch']);
+        if ($restaurant->business_id) {
+            \App\Models\BusinessUser::query()->firstOrCreate(
+                [
+                    'business_id' => $restaurant->business_id,
+                    'user_id' => $user->id,
+                    'role' => \App\Support\BusinessRoles::BUSINESS_OWNER,
+                ],
+                ['status' => 'active', 'joined_at' => now()],
+            );
+        }
+
         $user->load('roles.permissions');
 
         return [$user, $restaurant];

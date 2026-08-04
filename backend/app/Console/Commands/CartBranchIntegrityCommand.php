@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
+use App\Models\Restaurant;
 use App\Services\Cart\CartBranchContext;
 use Illuminate\Console\Command;
 
@@ -27,9 +28,13 @@ class CartBranchIntegrityCommand extends Command
                     $issues[] = "cart:{$cart->public_id} missing restaurant_id";
                     continue;
                 }
-                $restaurant = $cart->restaurant;
+                $restaurant = Restaurant::withTrashed()->find($cart->restaurant_id);
                 if (! $restaurant) {
-                    $issues[] = "cart:{$cart->public_id} restaurant missing";
+                    $issues[] = "cart:{$cart->public_id} restaurant physically missing";
+                    continue;
+                }
+                if ($restaurant->trashed()) {
+                    $issues[] = "cart:{$cart->public_id} restaurant soft-deleted slug={$restaurant->slug}";
                     continue;
                 }
                 if ($restaurant->branch_id) {
@@ -56,13 +61,19 @@ class CartBranchIntegrityCommand extends Command
             }
         });
 
-        Order::query()->with(['restaurant.branch'])->latest('id')->limit(500)->get()->each(function (Order $order) use (&$issues, $branchContext) {
-            $restaurant = $order->restaurant;
+        Order::query()->latest('id')->limit(500)->get()->each(function (Order $order) use (&$issues, $branchContext) {
+            $restaurant = Restaurant::withTrashed()->find($order->restaurant_id);
             if (! $restaurant) {
-                $issues[] = "order:{$order->public_id} restaurant missing";
+                $issues[] = "order:{$order->public_id} restaurant physically missing";
 
                 return;
             }
+            if ($restaurant->trashed()) {
+                $issues[] = "order:{$order->public_id} restaurant soft-deleted slug={$restaurant->slug}";
+
+                return;
+            }
+            $restaurant->loadMissing('branch');
             if ($restaurant->branch_id && $restaurant->branch
                 && ! $branchContext->linksAreConsistent($restaurant->branch, $restaurant)) {
                 $issues[] = "order:{$order->public_id} branch/restaurant mutual-link mismatch";

@@ -17,7 +17,7 @@ class AdminOrderController extends Controller
     public function index(Request $request)
     {
         $query = Order::query()
-            ->with(['restaurant:id,public_id,trading_name,slug,ownership_type'])
+            ->with(['historicalRestaurant:id,public_id,trading_name,slug,ownership_type,deleted_at'])
             ->orderByDesc('placed_at');
 
         if ($request->filled('order_number')) {
@@ -33,13 +33,13 @@ class AdminOrderController extends Controller
             $query->where('fulfilment_type', $request->string('fulfilment_type'));
         }
         if ($request->filled('restaurant_public_id')) {
-            $rid = Restaurant::query()->where('public_id', $request->string('restaurant_public_id'))->value('id');
+            $rid = Restaurant::withTrashed()->where('public_id', $request->string('restaurant_public_id'))->value('id');
             if ($rid) {
                 $query->where('restaurant_id', $rid);
             }
         }
         if ($request->filled('ownership_type')) {
-            $query->whereHas('restaurant', fn ($q) => $q->where('ownership_type', $request->string('ownership_type')));
+            $query->whereHas('historicalRestaurant', fn ($q) => $q->where('ownership_type', $request->string('ownership_type')));
         }
         if ($request->filled('customer_email')) {
             $query->where('customer_email_snapshot', 'like', '%'.$request->string('customer_email').'%');
@@ -79,7 +79,7 @@ class AdminOrderController extends Controller
     {
         $order = Order::query()
             ->where('public_id', $publicId)
-            ->with(['restaurant', 'items.modifiers', 'adjustments', 'statusHistory'])
+            ->with(['historicalRestaurant.branch.business', 'historicalRestaurant.business', 'items.modifiers', 'adjustments', 'statusHistory'])
             ->firstOrFail();
 
         $this->audit->log('admin.order.viewed', $request->user(), $order, metadata: [
@@ -105,6 +105,10 @@ class AdminOrderController extends Controller
 
     private function listResource(Order $order): array
     {
+        $restaurant = $order->relationLoaded('historicalRestaurant')
+            ? $order->historicalRestaurant
+            : $order->restaurant;
+
         return [
             'public_id' => $order->public_id,
             'order_number' => $order->order_number,
@@ -118,11 +122,48 @@ class AdminOrderController extends Controller
             'customer_email' => $order->customer_email_snapshot,
             'is_guest' => $order->customer_id === null,
             'placed_at' => $order->placed_at?->toIso8601String(),
-            'restaurant' => $order->restaurant ? [
-                'public_id' => $order->restaurant->public_id,
-                'trading_name' => $order->restaurant->trading_name,
-                'ownership_type' => $order->restaurant->ownership_type,
+            'restaurant' => $restaurant ? [
+                'public_id' => $restaurant->public_id,
+                'trading_name' => $restaurant->trading_name,
+                'ownership_type' => $restaurant->ownership_type,
+                'slug' => $restaurant->slug,
+                'soft_deleted' => method_exists($restaurant, 'trashed') ? $restaurant->trashed() : false,
             ] : null,
+            'relationship' => $this->relationshipStatus($order, $restaurant),
+        ];
+    }
+
+    /**
+     * @return array{state: string, warning: ?string, branch_public_id: ?string, business_public_id: ?string}
+     */
+    private function relationshipStatus(Order $order, $restaurant): array
+    {
+        if (! $restaurant) {
+            return [
+                'state' => 'unresolved_historical',
+                'warning' => 'Restaurant row is missing. Financial snapshots are preserved for manual review.',
+                'branch_public_id' => null,
+                'business_public_id' => null,
+            ];
+        }
+
+        $branch = $restaurant->branch;
+        $business = $restaurant->business ?? $branch?->business;
+
+        if ($restaurant->trashed()) {
+            return [
+                'state' => 'historical_soft_deleted',
+                'warning' => 'Partner restaurant is archived/soft-deleted. Historical order only — not a live branch queue item.',
+                'branch_public_id' => $branch?->public_id,
+                'business_public_id' => $business?->public_id,
+            ];
+        }
+
+        return [
+            'state' => 'operational',
+            'warning' => null,
+            'branch_public_id' => $branch?->public_id,
+            'business_public_id' => $business?->public_id,
         ];
     }
 

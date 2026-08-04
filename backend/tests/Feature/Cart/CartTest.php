@@ -179,6 +179,8 @@ class CartTest extends TestCase
             'is_available' => true,
         ]);
 
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
+
         return [$restaurant, $item];
     }
 }

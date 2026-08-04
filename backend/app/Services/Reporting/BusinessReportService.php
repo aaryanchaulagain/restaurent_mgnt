@@ -92,7 +92,7 @@ class BusinessReportService
     {
         $query = Branch::query()
             ->where('business_id', $business->id)
-            ->with(['restaurant'])
+            ->with(['restaurant' => fn ($q) => $q->withTrashed()])
             ->orderBy('sort_order')
             ->orderBy('name');
 
@@ -102,5 +102,26 @@ class BusinessReportService
         }
 
         return $query->get()->filter(fn (Branch $b) => $b->restaurant_id !== null)->values();
+    }
+
+    /**
+     * Soft-deleted restaurants remain attributable via restaurant_id in branch aggregates.
+     * Physically missing restaurants cannot be attributed to a business without snapshot evidence.
+     *
+     * @param  array{range?: string, start?: string, end?: string}  $rangeInput
+     * @return array{unassigned_historical_orders: int, unassigned_gross_order_value_cents: int, unassigned_paid_amount_cents: int, note: string}
+     */
+    public function unassignedHistoricalTotals(Business $business, array $rangeInput): array
+    {
+        // Validate range for consistent API behaviour; values are not attributed without evidence.
+        $timezone = $this->timezones->forBusiness($business);
+        ReportDateRange::fromRequest($rangeInput, $timezone);
+
+        return [
+            'unassigned_historical_orders' => 0,
+            'unassigned_gross_order_value_cents' => 0,
+            'unassigned_paid_amount_cents' => 0,
+            'note' => 'Physically missing restaurants cannot be attributed to a business without snapshot evidence. Soft-deleted partner orders remain in branch aggregates via restaurant_id.',
+        ];
     }
 }

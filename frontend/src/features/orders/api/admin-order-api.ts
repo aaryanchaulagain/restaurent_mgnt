@@ -9,7 +9,15 @@ export type AdminOrderListItem = OrderDetail & {
     public_id: string;
     trading_name: string;
     ownership_type: string;
+    slug?: string;
+    soft_deleted?: boolean;
   } | null;
+  relationship?: {
+    state: string;
+    warning: string | null;
+    branch_public_id: string | null;
+    business_public_id: string | null;
+  };
 };
 
 export const adminOrderApi = {

@@ -185,6 +185,8 @@ class OrderDomainEventTest extends TestCase
             'pickup_enabled' => true,
         ]);
 
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
+
         $menu = Menu::query()->create([
             'public_id' => (string) Str::uuid(),
             'restaurant_id' => $restaurant->id,
@@ -267,6 +269,19 @@ class OrderDomainEventTest extends TestCase
             'joined_at' => now(),
         ]);
         $user->roles()->attach($role->id, ['restaurant_id' => $restaurant->id]);
+
+        $restaurant->loadMissing(['business', 'branch']);
+        if ($restaurant->business_id) {
+            \App\Models\BusinessUser::query()->firstOrCreate(
+                [
+                    'business_id' => $restaurant->business_id,
+                    'user_id' => $user->id,
+                    'role' => \App\Support\BusinessRoles::BUSINESS_OWNER,
+                ],
+                ['status' => 'active', 'joined_at' => now()],
+            );
+        }
+
         $user->load('roles.permissions');
 
         return [$user, $restaurant];

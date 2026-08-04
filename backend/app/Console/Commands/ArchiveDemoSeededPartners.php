@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\Partner\RestaurantStatus;
 use App\Models\Business;
 use App\Models\Restaurant;
+use App\Support\DemoSeededRestaurantSlugs;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -17,29 +18,6 @@ class ArchiveDemoSeededPartners extends Command
     protected $signature = 'demo:archive-seeded-partners {--dry-run : List targets without changing data}';
 
     protected $description = 'Archive confirmed Phase4/5/6/Sold demo restaurants by exact slug; preserve Suvakamana and user-created partners.';
-
-    /** Exact restaurant slugs created by DatabaseSeeder / Phase4 / Phase5A / SoldRestaurantSeeder. */
-    private const DEMO_RESTAURANT_SLUGS = [
-        'himalayan-kitchen',
-        'harbour-spice-pending',
-        'golden-wok',
-        'night-owl',
-        'temp-closed',
-        'pending-setup',
-        'suspended-grill',
-        'disabled-diner',
-        'no-menu',
-        'pickup-only',
-        'postcode-delivery',
-        'sold-out-items',
-        'variant-heavy',
-        'required-mods',
-        'optional-mods',
-        'allergen-labelled',
-        'future-offer',
-        'expired-offer',
-        'sold-panels-kitchen',
-    ];
 
     /** Never archive these (system demo partner + user-created). */
     private const PRESERVE_RESTAURANT_SLUGS = [
@@ -56,7 +34,7 @@ class ArchiveDemoSeededPartners extends Command
         $dryRun = (bool) $this->option('dry-run');
         $targets = Restaurant::query()
             ->withTrashed()
-            ->whereIn('slug', self::DEMO_RESTAURANT_SLUGS)
+            ->whereIn('slug', DemoSeededRestaurantSlugs::all())
             ->whereNotIn('slug', self::PRESERVE_RESTAURANT_SLUGS)
             ->get();
 

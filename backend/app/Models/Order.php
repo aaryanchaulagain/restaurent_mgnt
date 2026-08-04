@@ -45,9 +45,22 @@ class Order extends Model
         return 'public_id';
     }
 
+    /**
+     * Operational restaurant relation (excludes soft-deleted partners).
+     * Soft-deleted restaurants must not appear in live partner queues via default eager loads.
+     */
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    /**
+     * Historical restaurant resolution including soft-deleted partners.
+     * Use for authorized historical/admin reads only — never for public marketplace.
+     */
+    public function historicalRestaurant(): BelongsTo
+    {
+        return $this->belongsTo(Restaurant::class, 'restaurant_id')->withTrashed();
     }
 
     public function customer(): BelongsTo

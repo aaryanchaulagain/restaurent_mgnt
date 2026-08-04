@@ -16,6 +16,7 @@ use App\Models\RestaurantUser;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Order\OrderTransitionService;
+use App\Support\BusinessRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Str;
@@ -373,6 +374,8 @@ class OrderPlacementTest extends TestCase
             'pickup_enabled' => true,
         ]);
 
+        $restaurant = $this->ensureRestaurantHierarchy($restaurant);
+
         $menu = Menu::query()->create([
             'public_id' => (string) Str::uuid(),
             'restaurant_id' => $restaurant->id,
@@ -454,6 +457,19 @@ class OrderPlacementTest extends TestCase
             'joined_at' => now(),
         ]);
         $user->roles()->attach($role->id, ['restaurant_id' => $restaurant->id]);
+
+        $restaurant->loadMissing(['business', 'branch']);
+        if ($restaurant->business_id) {
+            \App\Models\BusinessUser::query()->firstOrCreate(
+                [
+                    'business_id' => $restaurant->business_id,
+                    'user_id' => $user->id,
+                    'role' => BusinessRoles::BUSINESS_OWNER,
+                ],
+                ['status' => 'active', 'joined_at' => now()],
+            );
+        }
+
         $user->load('roles.permissions');
 
         return [$user, $restaurant];

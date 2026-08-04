@@ -34,6 +34,10 @@ class AdminBusinessReportController extends Controller
         }
 
         $payload['viewer'] = 'super_admin';
+        $payload['unassigned_historical'] = $this->reports->unassignedHistoricalTotals(
+            $business,
+            $request->only(['range', 'start', 'end']),
+        );
         $this->audit->log(
             'admin.business_report.viewed',
             $request->user(),

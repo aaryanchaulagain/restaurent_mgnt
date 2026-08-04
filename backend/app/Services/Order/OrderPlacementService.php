@@ -114,7 +114,7 @@ class OrderPlacementService
                 }
 
                 $restaurant = $cart->restaurant()->with(['business', 'branch'])->first();
-                if (! $restaurant || $restaurant->suspended_at || ! $restaurant->accepting_orders) {
+                if (! $restaurant || $restaurant->trashed() || $restaurant->suspended_at || ! $restaurant->accepting_orders) {
                     throw new OrderApiException('RESTAURANT_UNAVAILABLE', OrderErrorResponse::messageForCode('RESTAURANT_UNAVAILABLE'), 422);
                 }
 
@@ -122,12 +122,12 @@ class OrderPlacementService
                 if (! $branchCheck['ok']) {
                     $orderCode = match ($branchCheck['code']) {
                         'CART_BRANCH_NOT_ACCEPTING_ORDERS' => 'ORDER_BRANCH_UNAVAILABLE',
-                        'CART_BRANCH_RESTAURANT_MISMATCH' => 'ORDER_BRANCH_CONTEXT_INVALID',
-                        default => 'ORDER_BRANCH_UNAVAILABLE',
+                        'CART_BRANCH_RESTAURANT_MISMATCH' => 'ORDER_TENANT_CONTEXT_INVALID',
+                        default => 'ORDER_TENANT_CONTEXT_INVALID',
                     };
                     throw new OrderApiException(
                         $orderCode,
-                        $branchCheck['message'] ?? OrderErrorResponse::messageForCode('RESTAURANT_UNAVAILABLE'),
+                        $branchCheck['message'] ?? OrderErrorResponse::messageForCode($orderCode),
                         422,
                     );
                 }

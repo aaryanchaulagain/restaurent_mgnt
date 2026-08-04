@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Restaurant;
 use App\Support\BranchStatuses;
 use Illuminate\Console\Command;
 
@@ -39,13 +40,18 @@ class ReportingIntegrityCommand extends Command
             }
         });
 
-        Order::query()->with('restaurant')->latest('id')->limit(500)->get()->each(function (Order $order) use (&$issues) {
-            if (! $order->restaurant) {
-                $issues[] = "order:{$order->public_id} restaurant missing";
+        Order::query()->latest('id')->limit(500)->get()->each(function (Order $order) use (&$issues) {
+            $restaurant = Restaurant::withTrashed()->find($order->restaurant_id);
+            if (! $restaurant) {
+                $issues[] = "order:{$order->public_id} restaurant physically missing (ORDER_RESTAURANT_MISSING)";
 
                 return;
             }
-            if ($order->restaurant->branch_id === null) {
+            if ($restaurant->trashed()) {
+                $issues[] = "order:{$order->public_id} restaurant soft-deleted slug={$restaurant->slug} (ORDER_RESTAURANT_SOFT_DELETED)";
+            }
+            if ($restaurant->branch_id === null
+                && ! Branch::withTrashed()->where('restaurant_id', $restaurant->id)->exists()) {
                 $issues[] = "order:{$order->public_id} restaurant has no branch";
             }
             if ($order->total_cents === null) {

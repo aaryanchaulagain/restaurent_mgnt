@@ -34,6 +34,16 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ pub
           <section className="rounded-lg border bg-white p-5 space-y-3">
             <div className="flex justify-between"><OrderStatusBadge status={o.status} /><span>{formatCents(o.total_cents)}</span></div>
             <p className="text-sm">{o.restaurant?.trading_name} · {ownershipLabel(o.restaurant?.ownership_type)}</p>
+            {o.relationship?.warning ? (
+              <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                Super Admin View · {o.relationship.state.replaceAll("_", " ")}: {o.relationship.warning}
+              </p>
+            ) : null}
+            {o.relationship?.branch_public_id || o.relationship?.business_public_id ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                Branch {o.relationship.branch_public_id ?? "—"} · Business {o.relationship.business_public_id ?? "—"}
+              </p>
+            ) : null}
             <p className="text-sm">{o.customer_name} · {o.customer_email}</p>
             <p className="text-sm">Commission snapshot: {o.commission_rate_snapshot ?? 0} ({formatCents(o.commission_amount_cents ?? 0)})</p>
             <p className="text-xs text-[var(--text-muted)]">Idempotency: recorded (details hidden for security)</p>
