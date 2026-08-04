@@ -48,7 +48,7 @@ class OrderPlacementTest extends TestCase
         $response->assertJsonPath('data.order.status', 'awaiting_restaurant');
     }
 
-    public function test_guest_places_order(): void
+    public function test_guest_cannot_place_order(): void
     {
         [, , , $quote] = $this->createCheckoutQuote(true, 'first_party');
 
@@ -58,9 +58,7 @@ class OrderPlacementTest extends TestCase
             'payment_method' => 'cash',
             'customer_name' => 'Guest User',
             'customer_email' => 'guest@example.test',
-        ])->assertCreated()
-            ->assertJsonPath('data.order.status', 'awaiting_restaurant')
-            ->assertJsonStructure(['data' => ['order' => ['guest_access_token']]]);
+        ])->assertUnauthorized();
     }
 
     public function test_expired_quote_rejected(): void
@@ -522,24 +520,50 @@ class OrderPlacementTest extends TestCase
         return [$user, $order];
     }
 
-    /** @return array{0: \Illuminate\Testing\TestResponse, 1: Order, 2: string} */
+    /** @return array{0: null, 1: Order, 2: string} */
     private function placeGuestOrder(): array
     {
-        [, , , $quote] = $this->createCheckoutQuote(true, 'first_party');
-        $response = $this->postJson('/api/v1/orders', [
-            'checkout_quote_public_id' => $quote->public_id,
-            'idempotency_key' => 'idem-guest-'.Str::lower(Str::random(8)),
+        $restaurant = Restaurant::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'slug' => 'guest-track-'.Str::lower(Str::random(6)),
+            'legal_business_name' => 'Guest Track Pty Ltd',
+            'trading_name' => 'Guest Track Kitchen',
+            'ownership_type' => 'first_party',
+            'status' => RestaurantStatus::Active,
+            'published_at' => now(),
+            'timezone' => 'Australia/Sydney',
+            'currency' => 'AUD',
+            'accepting_orders' => true,
+            'pickup_enabled' => true,
+        ]);
+
+        $plainToken = Str::random(40);
+        $order = Order::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'order_number' => 'SVK-GUEST-'.Str::upper(Str::random(8)),
+            'idempotency_key' => 'guest-track-'.Str::lower(Str::random(8)),
+            'restaurant_id' => $restaurant->id,
+            'status' => 'awaiting_restaurant',
             'payment_method' => 'cash',
-            'customer_name' => 'Guest User',
-            'customer_email' => 'guest@example.test',
-        ])->assertCreated();
+            'payment_status' => 'unpaid',
+            'fulfilment_type' => 'pickup',
+            'currency' => 'AUD',
+            'customer_name_snapshot' => 'Guest User',
+            'customer_email_snapshot' => 'guest@example.test',
+            'guest_token_hash' => hash('sha256', $plainToken),
+            'subtotal_cents' => 1000,
+            'discount_cents' => 0,
+            'tax_cents' => 0,
+            'service_fee_cents' => 0,
+            'delivery_fee_cents' => 0,
+            'total_cents' => 1000,
+            'commission_rate_snapshot' => 0,
+            'commission_amount_cents' => 0,
+            'restaurant_net_estimate_cents' => 1000,
+            'placed_at' => now(),
+        ]);
 
-        $order = Order::query()
-            ->where('order_number', $response->json('data.order.order_number'))
-            ->with('items')
-            ->firstOrFail();
-
-        return [$response, $order, (string) $response->json('data.order.guest_access_token')];
+        return [null, $order, $plainToken];
     }
 
     private function seedPermissions(): void

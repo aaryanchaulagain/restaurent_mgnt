@@ -11,7 +11,7 @@ export default function SecurityPage() {
   return (
     <AuthGuard requireMfaForAdmin={false}>
       <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
-        <p className="font-[family-name:var(--font-display)] text-3xl">Suvakamana</p>
+        <p className="font-[family-name:var(--font-display)] text-3xl">Khana</p>
         <h1 className="mt-4 text-4xl">Security</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Manage password and signed-in devices.

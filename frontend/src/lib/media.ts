@@ -19,7 +19,7 @@ export function resolveMediaUrl(
   }
   if (url.startsWith("/storage/") || url.startsWith("storage/")) {
     const apiOrigin =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
     return `${apiOrigin}${url.startsWith("/") ? url : `/${url}`}`;
   }
   if (url.startsWith("/images/")) {

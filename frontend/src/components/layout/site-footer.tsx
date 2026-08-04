@@ -7,8 +7,8 @@ export function SiteFooter() {
         <div className="md:col-span-2">
           <p className="font-[family-name:var(--font-display)] text-3xl">Khana</p>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-white/70">
-            A marketplace for restaurants, bakeries, butcheries and groceries — including
-            partners like Suvakamana Restaurant.
+            Khana is a marketplace for restaurants, bakeries, butcheries, groceries and other local
+            businesses.
           </p>
         </div>
         <div>

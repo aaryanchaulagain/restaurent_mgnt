@@ -11,6 +11,7 @@ use App\Models\UserSession;
 use App\Services\Auth\AuditLogger;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\MfaService;
+use App\Notifications\VerifyEmail;
 use App\Services\Auth\SessionTracker;
 use App\Support\ApiResponse;
 use Illuminate\Auth\Events\Verified;
@@ -38,10 +39,29 @@ class AuthController extends Controller
         $user->sendEmailVerificationNotification();
 
         return ApiResponse::success(
-            data: ['user' => new UserResource($user)],
+            data: [
+                'user' => new UserResource($user),
+                ...$this->localVerificationLink($user),
+            ],
             message: 'Registration successful. Please verify your email.',
             status: 201,
         );
+    }
+
+    /**
+     * Local development runs on the `log` mailer, so the verification link never
+     * reaches an inbox. Returning it keeps developers out of storage/logs while
+     * staying absent from every other environment.
+     *
+     * @return array{verification_url?: string}
+     */
+    private function localVerificationLink(User $user): array
+    {
+        if (! app()->environment('local')) {
+            return [];
+        }
+
+        return ['verification_url' => VerifyEmail::frontendVerificationUrl($user)];
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -145,7 +165,10 @@ class AuthController extends Controller
         $request->user()->sendEmailVerificationNotification();
         $this->auditLogger->log('auth.verification_resent', $request->user(), $request->user(), request: $request);
 
-        return ApiResponse::success(message: 'Verification link sent.');
+        return ApiResponse::success(
+            data: $this->localVerificationLink($request->user()),
+            message: 'Verification link sent.',
+        );
     }
 
     public function verifyEmail(Request $request, int $id, string $hash): JsonResponse

@@ -41,9 +41,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const query = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
-      const res = await cartApi.getCart();
-      return res.data;
+      try {
+        const res = await cartApi.getCart();
+        return res.data;
+      } catch (e) {
+        if (e instanceof ApiError && [401, 403].includes(e.status)) {
+          return { cart: null, pricing: null };
+        }
+        throw e;
+      }
     },
+    retry: false,
   });
 
   const addMutation = useMutation({

@@ -9,7 +9,7 @@ export default function LoginPage() {
     <GuestGuard>
       <AuthPageShell
         title="Welcome back"
-        subtitle="Sign in to your customer or partner account."
+        subtitle="Sign in to your Khana customer or partner account."
         footer={
           <>
             New here?{" "}

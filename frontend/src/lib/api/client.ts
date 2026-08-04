@@ -1,5 +1,5 @@
 export const apiOrigin =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
 /** @deprecated Prefer apiOrigin + path. Kept for Phase 0 health checks. */
 export const apiBaseUrl = `${apiOrigin}/api/v1`;

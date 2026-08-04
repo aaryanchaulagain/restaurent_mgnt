@@ -11,9 +11,11 @@ import { Modal } from "@/components/ui/overlay";
 import { SearchInput, Textarea } from "@/components/ui/forms";
 import { publicRestaurantApi, type PublicMenuItem } from "@/features/cart/api/cart-api";
 import { useCart } from "@/features/cart/components/cart-provider";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getBusinessTypeConfig } from "@/features/business/config/business-type-config";
 import { formatCents } from "@/lib/utils";
 import { pickCardImage } from "@/lib/media";
+import { useRouter } from "next/navigation";
 
 function pickImage(urls: { card_url: string; original_url: string }) {
   return pickCardImage(urls);
@@ -84,6 +86,8 @@ function MenuItemRow({
 }
 
 export function LiveRestaurantPage({ slug }: { slug: string }) {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { push } = useToast();
   const { cart, pricing, addItem } = useCart();
   const [menuQuery, setMenuQuery] = useState("");
@@ -135,6 +139,12 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
 
   const onAddToCart = async () => {
     if (!selected || !selected.is_available) return;
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      const next = encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : `/restaurants/${slug}`);
+      router.push(`/login?next=${next}`);
+      return;
+    }
     try {
       await addItem({
         menu_item_public_id: selected.public_id,
@@ -543,10 +553,12 @@ export function LiveRestaurantPage({ slug }: { slug: string }) {
             <Button
               className="w-full"
               size="lg"
-              disabled={!selected.is_available || unavailable}
+              disabled={!selected.is_available || unavailable || authLoading}
               onClick={onAddToCart}
             >
-              Add to cart · {formatCents(estimateUnit())}
+              {isAuthenticated
+                ? `Add to cart · ${formatCents(estimateUnit())}`
+                : "Sign in to order"}
             </Button>
           </div>
         ) : null}

@@ -13,7 +13,7 @@ export default function SuspendedAccountPage() {
       }
     >
       <p className="text-sm text-[var(--text-secondary)]">
-        Please contact Suvakamana support if you need help restoring access.
+        Please contact Khana support if you need help restoring access.
       </p>
     </AuthPageShell>
   );

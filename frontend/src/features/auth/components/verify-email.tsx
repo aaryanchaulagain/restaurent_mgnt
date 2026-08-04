@@ -2,17 +2,20 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
 import { authApi } from "../api/auth-api";
 import { useAuth } from "../hooks/use-auth";
 
 export function VerifyEmailNotice() {
-  const { user, refresh } = useAuth();
+  const { user, refresh, logout } = useAuth();
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [devLink, setDevLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,13 +31,25 @@ export function VerifyEmailNotice() {
     setLoading(true);
     setError(null);
     setMessage(null);
+    setDevLink(null);
     try {
       const res = await authApi.resendVerification();
       setMessage(res.message);
+      setDevLink(res.data?.verification_url ?? null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Unable to resend verification.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function useDifferentAccount() {
+    setSwitching(true);
+    try {
+      await logout();
+      router.replace("/login");
+    } finally {
+      setSwitching(false);
     }
   }
 
@@ -56,11 +71,19 @@ export function VerifyEmailNotice() {
     <div className="space-y-4">
       <p className="text-sm text-[var(--text-secondary)]">
         We sent a verification link to {user?.email ?? "your email"}. Open the link to activate
-        your account.
+        your Khana account.
       </p>
       {message ? (
         <p className="text-sm text-[var(--color-success,#2f6b4f)]" role="status">
           {message}
+        </p>
+      ) : null}
+      {devLink ? (
+        <p className="break-all rounded-[var(--radius-md)] bg-[var(--surface-sunken,#f4f1ec)] p-3 text-xs text-[var(--text-secondary)]">
+          Local development link:{" "}
+          <a href={devLink} className="font-semibold text-[var(--color-burnt-orange)]">
+            open verification link
+          </a>
         </p>
       ) : null}
       {error ? (
@@ -70,6 +93,15 @@ export function VerifyEmailNotice() {
       ) : null}
       <Button type="button" loading={loading} onClick={() => void resend()} className="w-full">
         Resend verification email
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        loading={switching}
+        onClick={() => void useDifferentAccount()}
+        className="w-full"
+      >
+        Sign out and use a different account
       </Button>
     </div>
   );

@@ -68,82 +68,22 @@ class CartTest extends TestCase
             ->assertJsonPath('errors.code.0', 'CART_RESTAURANT_CONFLICT');
     }
 
-    public function test_guest_cart_cookie_created_and_reused(): void
+    public function test_unauthenticated_cannot_add_to_cart(): void
     {
         [, $item] = $this->liveMenu('guest-cart');
-        $cookieName = config('cart.cookie_name');
 
-        $response = $this->postJson('/api/v1/cart/items', [
+        $this->postJson('/api/v1/cart/items', [
             'menu_item_public_id' => $item->public_id,
             'quantity' => 1,
-        ])->assertCreated();
-
-        $response->assertCookie($cookieName);
-        $plainToken = $response->getCookie($cookieName)?->getValue();
-        $this->assertIsString($plainToken);
-        $this->assertSame(64, strlen($plainToken));
-
-        $cart = Cart::query()->whereNotNull('token_hash')->firstOrFail();
-        $this->assertSame(hash('sha256', $plainToken), $cart->token_hash);
-
-        $this->call('GET', '/api/v1/cart', [], [$cookieName => $plainToken], [], [
-            'HTTP_ACCEPT' => 'application/json',
-            'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
-        ])
-            ->assertOk()
-            ->assertJsonPath('data.cart.public_id', $cart->public_id);
-
-        $this->withCredentials()
-            ->withUnencryptedCookie($cookieName, Str::random(64))
-            ->getJson('/api/v1/cart')
-            ->assertOk()
-            ->assertJsonPath('data.cart', null);
+        ])->assertUnauthorized();
     }
 
-    public function test_guest_cookie_is_http_only_and_same_site_lax(): void
+    public function test_unauthenticated_cannot_view_cart(): void
     {
-        [, $item] = $this->liveMenu('guest-cookie-attrs');
-        $cookieName = config('cart.cookie_name');
-
-        $response = $this->postJson('/api/v1/cart/items', [
-            'menu_item_public_id' => $item->public_id,
-            'quantity' => 1,
-        ])->assertCreated();
-
-        $cookie = $response->getCookie($cookieName);
-        $this->assertTrue($cookie->isHttpOnly());
-        $this->assertSame('lax', strtolower($cookie->getSameSite()));
+        $this->getJson('/api/v1/cart')->assertUnauthorized();
     }
 
-    public function test_expired_guest_cart_not_restored(): void
-    {
-        [$restaurant, $item] = $this->liveMenu('guest-expired');
-        $token = Str::random(64);
-        $cart = Cart::query()->create([
-            'public_id' => (string) Str::uuid(),
-            'token_hash' => hash('sha256', $token),
-            'restaurant_id' => $restaurant->id,
-            'status' => 'active',
-            'currency' => 'AUD',
-            'expires_at' => now()->subMinute(),
-        ]);
-        CartItem::query()->create([
-            'public_id' => (string) Str::uuid(),
-            'cart_id' => $cart->id,
-            'menu_item_id' => $item->id,
-            'quantity' => 1,
-            'unit_price_snapshot_cents' => 1250,
-            'estimated_total_cents' => 1250,
-        ]);
-
-        $this->withCredentials()
-            ->withUnencryptedCookie(config('cart.cookie_name'), $token)
-            ->getJson('/api/v1/cart')
-            ->assertOk()
-            ->assertJsonPath('data.cart', null);
-    }
-
-    public function test_guest_cannot_access_customer_cart(): void
+    public function test_authenticated_cart_is_customer_scoped(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         $role = Role::query()->where('slug', 'customer')->firstOrFail();
@@ -157,18 +97,15 @@ class CartTest extends TestCase
         ])->assertCreated();
 
         $this->assertNotNull(Cart::query()->where('customer_id', $user->id)->first());
-
-        auth()->forgetGuards();
-
-        $this->withCredentials()
-            ->withUnencryptedCookie(config('cart.cookie_name'), Str::random(64))
-            ->getJson('/api/v1/cart')
-            ->assertOk()
-            ->assertJsonPath('data.cart', null);
     }
 
     public function test_client_price_is_ignored_by_server(): void
     {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $role = Role::query()->where('slug', 'customer')->firstOrFail();
+        $user->roles()->attach($role->id);
+        Sanctum::actingAs($user);
+
         [, $item] = $this->liveMenu();
         $this->postJson('/api/v1/cart/items', [
             'menu_item_public_id' => $item->public_id,
@@ -180,6 +117,11 @@ class CartTest extends TestCase
 
     public function test_inactive_item_rejected(): void
     {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $role = Role::query()->where('slug', 'customer')->firstOrFail();
+        $user->roles()->attach($role->id);
+        Sanctum::actingAs($user);
+
         [, $item] = $this->liveMenu();
         $item->update(['is_active' => false]);
         $this->postJson('/api/v1/cart/items', [

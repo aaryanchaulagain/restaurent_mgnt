@@ -24,7 +24,7 @@ class ApplicationSubmittedNotification extends Notification implements ShouldQue
         $url = rtrim(config('suvakamana.frontend_url'), '/').'/partner/applications/'.$this->application->public_id;
 
         return (new MailMessage)
-            ->subject('Application received — Suvakamana')
+            ->subject('Application received — Khana')
             ->line('We received your restaurant partner application for '.$this->application->trading_name.'.')
             ->action('View application', $url);
     }

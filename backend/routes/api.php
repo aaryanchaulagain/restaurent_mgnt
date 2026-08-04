@@ -55,7 +55,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/platform-restaurant', [PublicRestaurantController::class, 'platformRestaurant']);
     });
 
-    Route::prefix('cart')->group(function (): void {
+    Route::prefix('cart')->middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class])->group(function (): void {
         Route::get('/', [CartController::class, 'show']);
         Route::post('/items', [CartController::class, 'storeItem']);
         Route::patch('/items/{publicId}', [CartController::class, 'updateItem']);
@@ -63,12 +63,14 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/', [CartController::class, 'destroy']);
         Route::post('/replace-restaurant', [CartController::class, 'replaceRestaurant']);
         Route::post('/validate', [CartController::class, 'validateCart']);
-        Route::post('/merge', [CartController::class, 'merge'])->middleware('auth:sanctum');
+        Route::post('/merge', [CartController::class, 'merge']);
     });
 
-    Route::post('/checkout/quote', [CheckoutController::class, 'quote']);
+    Route::post('/checkout/quote', [CheckoutController::class, 'quote'])
+        ->middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class]);
 
-    Route::post('/orders', [CustomerOrderController::class, 'store']);
+    Route::post('/orders', [CustomerOrderController::class, 'store'])
+        ->middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class, EnsureRole::class.':customer']);
     Route::get('/guest/orders/{orderNumber}', [CustomerOrderController::class, 'guestShow']);
 
     Route::middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class, EnsureRole::class.':customer'])

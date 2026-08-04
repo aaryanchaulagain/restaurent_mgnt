@@ -137,7 +137,11 @@ export function GuestGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isLoading || status !== "authenticated" || !user) return;
-    if (isSuperAdmin(user)) {
+    // Every portal landing page requires a verified email, so routing an
+    // unverified account there only bounces it on to /verify-email.
+    if (!user.email_verified_at) {
+      router.replace("/verify-email");
+    } else if (isSuperAdmin(user)) {
       router.replace("/admin/dashboard");
     } else if (isRestaurantUser(user)) {
       router.replace("/restaurant/dashboard");

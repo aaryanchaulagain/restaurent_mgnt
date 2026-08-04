@@ -23,15 +23,33 @@ export default function ContactPage() {
         Contact
       </h1>
       <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
-        Questions about orders, partnerships, or the Khana platform? Send us a message —
-        or visit our partner Suvakamana Restaurant in Sydney.
+        Questions about orders, partnerships, or the Khana platform? Send us a message.
       </p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="space-y-4 text-sm text-[var(--text-secondary)]">
           <div>
-            <p className="font-semibold text-[var(--text-primary)]">Suvakamana Restaurant</p>
-            <p className="mt-1">{SUVAKAMANA_ADDRESS}</p>
+            <p className="font-semibold text-[var(--text-primary)]">Khana support</p>
+            <a
+              href="mailto:support@khana.local"
+              className="text-[var(--color-burnt-orange)] hover:underline"
+            >
+              support@khana.local
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--text-primary)]">Partner enquiries</p>
+            <a
+              href="mailto:partners@khana.local"
+              className="text-[var(--color-burnt-orange)] hover:underline"
+            >
+              partners@khana.local
+            </a>
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--text-primary)]">Featured partner location</p>
+            <p className="mt-1">Suvakamana Restaurant</p>
+            <p>{SUVAKAMANA_ADDRESS}</p>
             <a
               href={MAP_OPEN_URL}
               target="_blank"
@@ -42,27 +60,8 @@ export default function ContactPage() {
             </a>
           </div>
           <div>
-            <p className="font-semibold text-[var(--text-primary)]">Email</p>
-            <a
-              href="mailto:hello@suvakamana.com"
-              className="text-[var(--color-burnt-orange)] hover:underline"
-            >
-              hello@suvakamana.com
-            </a>
-          </div>
-          <div>
-            <p className="font-semibold text-[var(--text-primary)]">Partners</p>
-            <a
-              href="mailto:partners@suvakamana.com"
-              className="text-[var(--color-burnt-orange)] hover:underline"
-            >
-              partners@suvakamana.com
-            </a>
-          </div>
-          <div>
             <p className="font-semibold text-[var(--text-primary)]">Hours</p>
             <p>Support · Mon–Sun, 9am–9pm</p>
-            <p>Kitchen · 10am–10pm (Sydney)</p>
           </div>
         </div>
 

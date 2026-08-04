@@ -34,7 +34,7 @@ export default function RestaurantProfilePage() {
       portalLabel="Restaurant Admin"
       items={restaurantNav}
       title="Restaurant profile"
-      subtitle="Public identity shown on Suvakamana marketplace pages"
+      subtitle="Public identity shown on Khana marketplace pages"
       actions={
         <Button
           disabled={!checklist.data?.can_activate || activate.isPending}

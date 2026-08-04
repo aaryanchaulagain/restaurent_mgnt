@@ -7,7 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge, Skeleton } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/overlay";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/features/cart/components/cart-provider";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useToast } from "@/components/ui/navigation";
 import { apiGet } from "@/lib/api/client";
 import { formatCents } from "@/lib/utils";
@@ -54,6 +56,8 @@ type PlatformData = {
 };
 
 export function SuvakamanaMenuSection() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { push } = useToast();
   const { addItem } = useCart();
   const [selected, setSelected] = useState<PlatformItem | null>(null);
@@ -80,9 +84,21 @@ export function SuvakamanaMenuSection() {
   const needsConfig = (item: PlatformItem) =>
     item.variants.length > 1 || item.modifier_groups.some((g) => g.is_required);
 
+  const requireLogin = () => {
+    const next = encodeURIComponent(
+      typeof window !== "undefined" ? window.location.pathname + window.location.search : "/",
+    );
+    router.push(`/login?next=${next}`);
+  };
+
   const handleAdd = async (item?: PlatformItem) => {
     const target = item ?? selected;
     if (!target || !target.is_available) return;
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      requireLogin();
+      return;
+    }
     try {
       await addItem({
         menu_item_public_id: target.public_id,

@@ -7,7 +7,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthPageShell
       title="Reset password"
-      subtitle="Choose a new password for your Suvakamana account."
+      subtitle="Choose a new password for your Khana account."
       footer={
         <Link href="/login" className="font-semibold text-[var(--color-burnt-orange)]">
           Back to sign in

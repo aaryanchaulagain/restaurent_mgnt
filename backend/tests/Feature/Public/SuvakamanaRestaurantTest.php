@@ -157,7 +157,7 @@ class SuvakamanaRestaurantTest extends TestCase
         $this->assertSame(1, Restaurant::query()->where('slug', 'suvakamana-restaurant')->count());
     }
 
-    public function test_suvakamana_item_addable_to_guest_cart(): void
+    public function test_suvakamana_item_requires_auth_to_add_to_cart(): void
     {
         $this->seedSuvakamana();
         $item = MenuItem::query()->where('slug', 'dal-bhat')->firstOrFail();
@@ -165,7 +165,7 @@ class SuvakamanaRestaurantTest extends TestCase
         $this->postJson('/api/v1/cart/items', [
             'menu_item_public_id' => $item->public_id,
             'quantity' => 1,
-        ])->assertStatus(201);
+        ])->assertUnauthorized();
     }
 
     public function test_platform_restaurant_returns_404_when_not_seeded(): void

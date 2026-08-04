@@ -90,7 +90,7 @@ class SuvakamanaRestaurantSeeder extends Seeder
         $categories = [
             'Popular' => [
                 ['name' => 'Momo Platter', 'slug' => 'momo-platter', 'price' => 1850, 'desc' => 'Assorted steamed dumplings with sesame-tomato chutney', 'featured' => true, 'vegetarian' => false, 'image' => 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=800&q=80', 'variants' => [['Steamed', 1850], ['Fried', 1990], ['Jhol (soup)', 2050]]],
-                ['name' => 'Chicken Tikka', 'slug' => 'chicken-tikka', 'price' => 2190, 'desc' => 'Tandoori-spiced chicken thigh pieces with mint raita', 'featured' => true, 'image' => 'https://images.unsplash.com/photo-1603894584372-c003cd5307ee?auto=format&fit=crop&w=800&q=80'],
+                ['name' => 'Chicken Tikka', 'slug' => 'chicken-tikka', 'price' => 2190, 'desc' => 'Tandoori-spiced chicken thigh pieces with mint raita', 'featured' => true, 'image' => 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80'],
                 ['name' => 'Butter Chicken', 'slug' => 'butter-chicken', 'price' => 2490, 'desc' => 'Rich tomato-cream curry with tender chicken', 'featured' => true, 'image' => 'https://images.unsplash.com/photo-1588168333986-5078d3ae3976?auto=format&fit=crop&w=800&q=80'],
             ],
             'Entrées' => [

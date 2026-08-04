@@ -7,8 +7,8 @@ export default function RegisterPage() {
   return (
     <GuestGuard>
       <AuthPageShell
-        title="Create your account"
-        subtitle="Save addresses, track deliveries and reorder in one place."
+        title="Create your Khana account"
+        subtitle="Welcome to Khana. Save addresses, track deliveries and reorder in one place."
         footer={
           <>
             Already registered?{" "}

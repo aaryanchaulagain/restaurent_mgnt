@@ -41,7 +41,7 @@ export default function HomePage() {
             Restaurants, bakeries, butcheries &amp; groceries — one marketplace.
           </h1>
           <p className="hero-fade hero-fade-delay-2 mt-5 max-w-xl text-lg text-white/80">
-            Order from local partners on Khana, including Suvakamana Restaurant and many more.
+            Order from local restaurants, bakeries, butcheries and groceries on Khana.
           </p>
           <form
             className="hero-fade hero-fade-delay-3 mt-8 flex w-full max-w-xl flex-col gap-3 sm:flex-row"

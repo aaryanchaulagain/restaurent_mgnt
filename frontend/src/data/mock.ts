@@ -257,7 +257,7 @@ export const menuItems: MenuItem[] = [
     description: "Tandoor chicken simmered in a tomato-cashew gravy with fenugreek.",
     priceCents: 1499,
     image:
-      "https://images.unsplash.com/photo-1603894584372-c003cd5307ee?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=800&q=80",
     allergens: ["Dairy", "Nuts"],
     popular: true,
   },

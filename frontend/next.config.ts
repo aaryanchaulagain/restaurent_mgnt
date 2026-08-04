@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
+  // Same-origin proxy so a single Cloudflare Tunnel can reach Laravel too.
+  async rewrites() {
+    const api = process.env.BACKEND_ORIGIN?.replace(/\/$/, "") || "http://127.0.0.1:8000";
+    return [
+      { source: "/api/:path*", destination: `${api}/api/:path*` },
+      { source: "/sanctum/:path*", destination: `${api}/sanctum/:path*` },
+      { source: "/storage/:path*", destination: `${api}/storage/:path*` },
+    ];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

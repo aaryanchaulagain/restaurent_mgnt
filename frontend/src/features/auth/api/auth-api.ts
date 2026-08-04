@@ -9,6 +9,9 @@ import type {
 } from "../schemas";
 
 type UserPayload = { user: AuthUser };
+/** `verification_url` is only present when the API runs with APP_ENV=local. */
+type VerificationPayload = { verification_url?: string };
+type RegisterPayload = UserPayload & VerificationPayload;
 type LoginPayload = { user?: AuthUser; mfa_required?: boolean };
 type SessionsPayload = { sessions: AuthSession[] };
 type MfaSetupPayload = {
@@ -21,7 +24,7 @@ export type LoginPortal = "standard" | "super_admin";
 
 export const authApi = {
   register(input: RegisterInput) {
-    return apiRequest<UserPayload>("/api/auth/register", {
+    return apiRequest<RegisterPayload>("/api/auth/register", {
       method: "POST",
       body: {
         first_name: input.first_name,
@@ -81,7 +84,7 @@ export const authApi = {
   },
 
   resendVerification() {
-    return apiRequest("/api/auth/email/verification-notification", {
+    return apiRequest<VerificationPayload>("/api/auth/email/verification-notification", {
       method: "POST",
     });
   },
