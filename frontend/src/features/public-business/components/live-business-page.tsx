@@ -11,6 +11,7 @@ import {
   type PublicBranchDto,
 } from "@/features/public-business/api/public-business-api";
 import { getBusinessTypeConfig } from "@/features/business/config/business-type-config";
+import { CustomerLocationSelector } from "@/features/public-business/components/customer-location-selector";
 
 function BranchCard({
   businessSlug,
@@ -103,7 +104,7 @@ export function LiveBusinessPage({ businessSlug }: { businessSlug: string }) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+      <section className="mx-auto max-w-5xl space-y-10 px-4 py-10 sm:px-6">
         {branch_count === 0 ? (
           <EmptyState
             title="No locations available"
@@ -129,17 +130,18 @@ export function LiveBusinessPage({ businessSlug }: { businessSlug: string }) {
         ) : null}
 
         {branch_count > 1 ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            <CustomerLocationSelector businessSlug={business.slug} />
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Choose a location</h2>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">All locations</h2>
               <p className="text-sm text-[var(--text-secondary)]">
-                Each location has its own catalogue and availability.
+                Browse any location manually — recommendations never change your cart.
               </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {branches.map((branch) => (
-                <BranchCard key={branch.public_id} businessSlug={business.slug} branch={branch} />
-              ))}
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {branches.map((branch) => (
+                  <BranchCard key={branch.public_id} businessSlug={business.slug} branch={branch} />
+                ))}
+              </div>
             </div>
           </div>
         ) : null}

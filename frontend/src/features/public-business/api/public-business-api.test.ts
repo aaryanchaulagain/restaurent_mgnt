@@ -15,4 +15,17 @@ describe("public business query keys", () => {
       publicBusinessQueryKeys.business("acme"),
     );
   });
+
+  it("scopes recommendation cache without raw coordinates", () => {
+    expect(publicBusinessQueryKeys.recommendations("acme", "delivery", "addr-1", null)).toEqual([
+      "branch-recommendations",
+      "acme",
+      "delivery",
+      "addr-1",
+      null,
+    ]);
+    expect(publicBusinessQueryKeys.recommendations("acme", "delivery", null, "4000")).not.toEqual(
+      publicBusinessQueryKeys.recommendations("acme", "pickup", null, "4000"),
+    );
+  });
 });

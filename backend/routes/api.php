@@ -16,11 +16,13 @@ use App\Http\Controllers\Api\Business\BusinessBranchController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Checkout\CheckoutController;
 use App\Http\Controllers\Api\Customer\CustomerAddressController;
+use App\Http\Controllers\Api\Customer\CustomerBranchRecommendationController;
 use App\Http\Controllers\Api\Order\CustomerOrderController;
 use App\Http\Controllers\Api\Order\RestaurantOrderController;
 use App\Http\Controllers\Api\Payment\CustomerPaymentController;
 use App\Http\Controllers\Api\Public\PublicRestaurantController;
 use App\Http\Controllers\Api\Public\PublicBusinessController;
+use App\Http\Controllers\Api\Public\PublicBranchRecommendationController;
 use App\Http\Controllers\Api\Restaurant\RestaurantHoursController;
 use App\Http\Controllers\Api\Restaurant\RestaurantInventoryController;
 use App\Http\Controllers\Api\Restaurant\RestaurantMediaController;
@@ -60,6 +62,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/businesses/{businessSlug}/branches', [PublicBusinessController::class, 'branches']);
         Route::get('/businesses/{businessSlug}/branches/{branchPublicId}', [PublicBusinessController::class, 'showBranch']);
         Route::get('/businesses/{businessSlug}/branches/{branchPublicId}/menu', [PublicBusinessController::class, 'branchMenu']);
+        Route::post('/businesses/{businessSlug}/branch-recommendations', [PublicBranchRecommendationController::class, 'store'])
+            ->middleware('throttle:30,1');
     });
 
     Route::get('/branch-invitations/{token}', [\App\Http\Controllers\Api\Public\PublicBranchInvitationController::class, 'show'])
@@ -104,6 +108,13 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/', [CustomerAddressController::class, 'store']);
             Route::patch('/{publicId}', [CustomerAddressController::class, 'update']);
             Route::delete('/{publicId}', [CustomerAddressController::class, 'destroy']);
+        });
+
+    Route::middleware(['auth:sanctum', EnsureAccountIsActive::class, EnsureEmailIsVerified::class, EnsureRole::class.':customer'])
+        ->prefix('customer')
+        ->group(function (): void {
+            Route::post('/businesses/{businessSlug}/branch-recommendations', [CustomerBranchRecommendationController::class, 'store'])
+                ->middleware('throttle:60,1');
         });
 });
 
