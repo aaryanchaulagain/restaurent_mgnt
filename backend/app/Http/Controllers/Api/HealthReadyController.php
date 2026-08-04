@@ -9,12 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Throwable;
 
-/**
- * Legacy health entrypoint — returns a minimal safe payload (no env/driver/credentials).
- * Prefer /api/health/live and /api/health/ready for probes.
- */
-class HealthController extends Controller
+class HealthReadyController extends Controller
 {
+    /** Readiness — safe dependency probes; no secrets or hosts. */
     public function __invoke(): JsonResponse
     {
         $checks = [
@@ -24,13 +21,14 @@ class HealthController extends Controller
         ];
 
         $ok = ! in_array('fail', $checks, true);
+        $payload = [
+            'status' => $ok ? 'ok' : 'degraded',
+            'checks' => $checks,
+            'version' => config('app.version', 'v1'),
+        ];
 
         return response()
-            ->json([
-                'status' => $ok ? 'ok' : 'degraded',
-                'checks' => $checks,
-                'version' => config('app.version', 'v1'),
-            ], $ok ? 200 : 503)
+            ->json($payload, $ok ? 200 : 503)
             ->header('X-Request-Id', (string) request()->attributes->get('request_id', ''));
     }
 
@@ -50,10 +48,11 @@ class HealthController extends Controller
     private function checkCache(): string
     {
         try {
-            $key = 'health:legacy:'.bin2hex(random_bytes(8));
+            $key = 'health:ready:'.bin2hex(random_bytes(8));
             Cache::put($key, '1', 5);
+            $ok = Cache::pull($key) === '1';
 
-            return Cache::pull($key) === '1' ? 'ok' : 'fail';
+            return $ok ? 'ok' : 'fail';
         } catch (Throwable $e) {
             report($e);
 

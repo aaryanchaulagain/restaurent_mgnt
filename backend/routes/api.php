@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\Admin\AdminRestaurantApplicationController;
 use App\Http\Controllers\Api\Admin\AdminRestaurantController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\HealthLiveController;
+use App\Http\Controllers\Api\HealthReadyController;
 use App\Http\Controllers\Api\Partner\PartnerApplicationController;
 use App\Http\Controllers\Api\Business\BusinessBranchController;
 use App\Http\Controllers\Api\Business\BusinessReportController;
@@ -46,10 +48,14 @@ use App\Http\Middleware\EnsureRole;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/health', HealthController::class);
+Route::get('/health', HealthController::class)->middleware('throttle:60,1');
+Route::get('/health/live', HealthLiveController::class)->middleware('throttle:120,1');
+Route::get('/health/ready', HealthReadyController::class)->middleware('throttle:60,1');
 
 Route::prefix('v1')->group(function (): void {
-    Route::get('/health', HealthController::class);
+    Route::get('/health', HealthController::class)->middleware('throttle:60,1');
+    Route::get('/health/live', HealthLiveController::class)->middleware('throttle:120,1');
+    Route::get('/health/ready', HealthReadyController::class)->middleware('throttle:60,1');
 
     Route::post('/webhooks/stripe', StripeWebhookController::class);
 

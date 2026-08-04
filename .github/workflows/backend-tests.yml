@@ -47,14 +47,30 @@ jobs:
           php-version: "8.2"
           extensions: pdo_pgsql, redis
           coverage: none
+      - name: Validate composer
+        run: composer validate --no-check-publish
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
+      - name: Ensure env is not tracked
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo ".env must not be tracked" >&2
+            exit 1
+          fi
+          git check-ignore -q .env || (echo ".env must be gitignored" >&2; exit 1)
       - name: Prepare environment
         run: |
           cp .env.example .env
           php artisan key:generate
-          sed -i 's/DB_DATABASE=suvakamana/DB_DATABASE=suvakamana_test/' .env
+          sed -i 's/DB_DATABASE=suvakamana_restaurant/DB_DATABASE=suvakamana_test/' .env
+          sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=pgsql/' .env
+          sed -i 's/DB_USERNAME=root/DB_USERNAME=suvakamana/' .env
+          sed -i 's/DB_PASSWORD=/DB_PASSWORD=secret/' .env
+          sed -i 's/DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
+          echo "DB_PORT=5432" >> .env
       - name: Run migrations
         run: php artisan migrate --force
+      - name: Dependency audit (report only)
+        run: composer audit || true
       - name: Run tests
         run: php artisan test

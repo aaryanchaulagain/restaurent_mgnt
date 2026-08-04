@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\SensitiveDataRedactor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,36 +29,12 @@ class AuditLogger
             'auditable_type' => $auditable ? $auditable::class : null,
             'auditable_id' => $auditable?->getKey(),
             'restaurant_id' => $restaurantId,
-            'old_values' => $this->scrub($oldValues),
-            'new_values' => $this->scrub($newValues),
+            'old_values' => SensitiveDataRedactor::scrub($oldValues),
+            'new_values' => SensitiveDataRedactor::scrub($newValues),
             'ip_address' => $request?->ip(),
             'user_agent' => $request?->userAgent(),
-            'metadata' => $this->scrub($metadata),
+            'metadata' => SensitiveDataRedactor::scrub($metadata),
             'created_at' => now(),
         ]);
-    }
-
-    private function scrub(?array $values): ?array
-    {
-        if ($values === null) {
-            return null;
-        }
-
-        $blocked = [
-            'password',
-            'password_confirmation',
-            'token',
-            'secret',
-            'secret_encrypted',
-            'recovery_codes',
-            'code',
-            'remember_token',
-        ];
-
-        foreach ($blocked as $key) {
-            unset($values[$key]);
-        }
-
-        return $values;
     }
 }

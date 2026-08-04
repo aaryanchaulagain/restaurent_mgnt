@@ -28,6 +28,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="file"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="FRONTEND_URL" value="http://localhost:3000"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
