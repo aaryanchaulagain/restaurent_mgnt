@@ -2,12 +2,8 @@
 
 namespace App\Http\Controllers\Api\Public;
 
-use App\Enums\Partner\RestaurantStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Public\PublicRestaurantResource;
-use App\Models\Allergen;
-use App\Models\Menu;
-use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\MenuItemInventory;
 use App\Models\Offer;
@@ -15,6 +11,8 @@ use App\Models\Restaurant;
 use App\Models\RestaurantOpeningHour;
 use App\Services\Inventory\MenuItemInventoryService;
 use App\Services\Media\PublicImageService;
+use App\Services\PublicCatalog\PublicBusinessBranchService;
+use App\Services\PublicCatalog\PublicCatalogueService;
 use App\Services\Restaurant\RestaurantOpenStatusService;
 use App\Support\ApiResponse;
 use App\Support\MenuItemTypeDetails;
@@ -27,15 +25,15 @@ class PublicRestaurantController extends Controller
         private readonly RestaurantOpenStatusService $openStatus,
         private readonly PublicImageService $images,
         private readonly MenuItemInventoryService $inventory,
+        private readonly PublicCatalogueService $catalogue,
+        private readonly PublicBusinessBranchService $publicVisibility,
     ) {}
 
     public function index(Request $request)
     {
         $query = Restaurant::query()
-            ->where('status', RestaurantStatus::Active)
-            ->whereNotNull('published_at')
-            ->whereNull('suspended_at')
-            ->with('cuisines');
+            ->tap(fn ($q) => $this->publicVisibility->scopePublicRestaurants($q))
+            ->with(['cuisines', 'business', 'branch']);
 
         if ($request->filled('search')) {
             $term = '%'.$request->string('search').'%';
@@ -102,9 +100,7 @@ class PublicRestaurantController extends Controller
         $cuisines = \App\Models\Cuisine::query()
             ->where('is_active', true)
             ->whereHas('restaurants', function ($q) {
-                $q->where('status', RestaurantStatus::Active)
-                    ->whereNotNull('published_at')
-                    ->whereNull('suspended_at');
+                $this->publicVisibility->scopePublicRestaurants($q);
             })
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -124,10 +120,8 @@ class PublicRestaurantController extends Controller
 
         $restaurant = Restaurant::query()
             ->where('slug', $slug)
-            ->where('status', RestaurantStatus::Active)
-            ->whereNotNull('published_at')
-            ->whereNull('suspended_at')
-            ->with('cuisines')
+            ->tap(fn ($q) => $this->publicVisibility->scopePublicRestaurants($q))
+            ->with(['cuisines', 'business', 'branch'])
             ->first();
 
         if (! $restaurant) {
@@ -228,10 +222,8 @@ class PublicRestaurantController extends Controller
     {
         $restaurant = Restaurant::query()
             ->where('slug', $slug)
-            ->where('status', RestaurantStatus::Active)
-            ->whereNotNull('published_at')
-            ->whereNull('suspended_at')
-            ->with('cuisines')
+            ->tap(fn ($q) => $this->publicVisibility->scopePublicRestaurants($q))
+            ->with(['cuisines', 'business', 'branch'])
             ->firstOrFail();
 
         $offers = Offer::query()
@@ -270,101 +262,10 @@ class PublicRestaurantController extends Controller
     {
         $restaurant = Restaurant::query()
             ->where('slug', $slug)
-            ->where('status', RestaurantStatus::Active)
-            ->whereNotNull('published_at')
-            ->whereNull('suspended_at')
+            ->tap(fn ($q) => $this->publicVisibility->scopePublicRestaurants($q))
             ->firstOrFail();
 
-        $menus = Menu::query()
-            ->where('restaurant_id', $restaurant->id)
-            ->where('status', 'active')
-            ->orderBy('sort_order')
-            ->get(['public_id', 'name', 'description', 'is_default']);
-
-        $categories = MenuCategory::query()
-            ->where('restaurant_id', $restaurant->id)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get();
-
-        $items = MenuItem::query()
-            ->where('restaurant_id', $restaurant->id)
-            ->where('is_active', true)
-            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true), 'allergens', 'modifierGroups' => fn ($q) => $q->where('is_active', true)->with(['options' => fn ($oq) => $oq->where('is_active', true)])])
-            ->orderBy('sort_order')
-            ->get();
-
-        $inventories = MenuItemInventory::query()
-            ->where('restaurant_id', $restaurant->id)
-            ->whereIn('menu_item_id', $items->pluck('id'))
-            ->get();
-
-        $items = $items->map(function (MenuItem $item) use ($inventories) {
-            $availability = $this->inventory->publicItemAvailability($item, $inventories);
-
-            return [
-                'public_id' => $item->public_id,
-                'menu_category_public_id' => $item->category?->public_id,
-                'name' => $item->name,
-                'slug' => $item->slug,
-                'short_description' => $item->short_description,
-                'description' => $item->description,
-                'image' => $this->images->toPublicPayload($item->image_urls, 'item'),
-                'base_price_cents' => $item->base_price_cents,
-                'compare_at_price_cents' => $item->compare_at_price_cents,
-                'preparation_minutes' => $item->preparation_minutes,
-                'is_available' => $availability['is_available'],
-                'availability_message' => $availability['availability_message'],
-                'in_stock' => $availability['in_stock'],
-                'dietary' => [
-                    'is_vegetarian' => $item->is_vegetarian,
-                    'is_vegan' => $item->is_vegan,
-                    'is_gluten_free' => $item->is_gluten_free,
-                    'is_halal' => $item->is_halal,
-                ],
-                'spice_level' => $item->spice_level,
-                'type_details' => MenuItemTypeDetails::forPublic($item->type_details),
-                'variants' => $item->variants
-                    ->filter(fn ($v) => $this->inventory->publicVariantAvailable($v, $inventories))
-                    ->values()
-                    ->map(fn ($v) => [
-                        'public_id' => $v->public_id,
-                        'name' => $v->name,
-                        'price_cents' => $v->price_cents,
-                        'is_default' => $v->is_default,
-                    ]),
-                'modifier_groups' => $item->modifierGroups->map(fn ($g) => [
-                    'public_id' => $g->public_id,
-                    'name' => $g->name,
-                    'selection_type' => $g->selection_type,
-                    'minimum_selections' => $g->minimum_selections,
-                    'maximum_selections' => $g->maximum_selections,
-                    'is_required' => $g->is_required,
-                    'options' => $g->options->where('is_active', true)->where('is_available', true)->values()->map(fn ($o) => [
-                        'public_id' => $o->public_id,
-                        'name' => $o->name,
-                        'price_adjustment_cents' => $o->price_adjustment_cents,
-                        'is_default' => $o->is_default,
-                    ]),
-                ]),
-                'allergens' => $item->allergens->map(fn (Allergen $a) => [
-                    'slug' => $a->slug,
-                    'name' => $a->name,
-                    'presence_type' => $a->pivot->presence_type,
-                ]),
-            ];
-        });
-
-        return ApiResponse::success([
-            'restaurant' => ['slug' => $restaurant->slug, 'public_id' => $restaurant->public_id],
-            'menus' => $menus,
-            'categories' => $categories->map(fn ($c) => [
-                'public_id' => $c->public_id,
-                'name' => $c->name,
-                'description' => $c->description,
-            ]),
-            'items' => $items,
-        ]);
+        return ApiResponse::success($this->catalogue->menuPayload($restaurant));
     }
 
     private function todayHours(Restaurant $restaurant): ?array

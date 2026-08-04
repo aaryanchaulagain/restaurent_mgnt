@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Order\CustomerOrderController;
 use App\Http\Controllers\Api\Order\RestaurantOrderController;
 use App\Http\Controllers\Api\Payment\CustomerPaymentController;
 use App\Http\Controllers\Api\Public\PublicRestaurantController;
+use App\Http\Controllers\Api\Public\PublicBusinessController;
 use App\Http\Controllers\Api\Restaurant\RestaurantHoursController;
 use App\Http\Controllers\Api\Restaurant\RestaurantInventoryController;
 use App\Http\Controllers\Api\Restaurant\RestaurantMediaController;
@@ -54,6 +55,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/restaurants/{slug}', [PublicRestaurantController::class, 'show']);
         Route::get('/restaurants/{slug}/menu', [PublicRestaurantController::class, 'menu']);
         Route::get('/platform-restaurant', [PublicRestaurantController::class, 'platformRestaurant']);
+
+        Route::get('/businesses/{businessSlug}', [PublicBusinessController::class, 'show']);
+        Route::get('/businesses/{businessSlug}/branches', [PublicBusinessController::class, 'branches']);
+        Route::get('/businesses/{businessSlug}/branches/{branchPublicId}', [PublicBusinessController::class, 'showBranch']);
+        Route::get('/businesses/{businessSlug}/branches/{branchPublicId}/menu', [PublicBusinessController::class, 'branchMenu']);
     });
 
     Route::get('/branch-invitations/{token}', [\App\Http\Controllers\Api\Public\PublicBranchInvitationController::class, 'show'])

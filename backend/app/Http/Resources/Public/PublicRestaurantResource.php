@@ -81,6 +81,15 @@ class PublicRestaurantResource extends JsonResource
                 'postcode' => $primary->postcode,
                 'address_line_1' => $primary->address_line_1,
             ] : null,
+            'business_slug' => $this->relationLoaded('business')
+                ? $this->business?->slug
+                : ($this->business_id ? $this->business()->value('slug') : null),
+            'branch_public_id' => $this->relationLoaded('branch')
+                ? $this->branch?->public_id
+                : ($this->branch_id ? $this->branch()->value('public_id') : null),
+            'branch_name' => $this->relationLoaded('branch')
+                ? $this->branch?->name
+                : ($this->branch_id ? $this->branch()->value('name') : null),
             'cuisines' => $this->whenLoaded('cuisines', fn () => $this->cuisines->map(fn ($c) => [
                 'name' => $c->name,
                 'slug' => $c->slug,
